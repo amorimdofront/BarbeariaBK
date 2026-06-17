@@ -18,36 +18,23 @@ function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [mostrarAuth, setMostrarAuth] = useState(false);
   const [mostrarAdmin, setMostrarAdmin] = useState(false);
+  const [telaSucesso, setTelaSucesso] = useState(false); // NOVO ESTADO: Tela de sucesso
   
   // Estados de Agendamento
   const [servicoSelecionado, setServicoSelecionado] = useState(null);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
 
-  // 1. RECEPTOR DO MERCADO PAGO (AGORA DENTRO DA FUNÇÃO!)
+  // 1. RECEPTOR DO MERCADO PAGO (TELA DE SUCESSO)
   useEffect(() => {
-    // Lê a URL atual do site para procurar os parâmetros do Mercado Pago
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status'); 
-    const preferenceId = params.get('preference_id');
 
-    // Se o cliente voltou com status de aprovado
-    if (status === 'approved' && preferenceId) {
-      const confirmarRetorno = async () => {
-        // Atualiza o banco silenciosamente
-        const { error } = await supabase
-          .from('agendamentos')
-          .update({ status_pagamento: 'aprovado', status: 'confirmado' })
-          .eq('pagamento_id', preferenceId);
-        
-        if (!error) {
-          alert('✅ Pagamento aprovado! Seu horário foi confirmado com sucesso na barbearia.');
-        }
-        
-        // Limpa a URL para tirar aqueles códigos feios do Mercado Pago
-        window.history.replaceState(null, '', window.location.pathname);
-      };
-
-      confirmarRetorno();
+    // Se o cliente voltou com status de aprovado do Mercado Pago
+    if (status === 'approved') {
+      setTelaSucesso(true);
+      
+      // Limpa a URL para tirar aqueles códigos da barra de endereço
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 
@@ -95,6 +82,8 @@ function App() {
     };
   }, []);
 
+  // ================= RENDERIZAÇÃO DAS TELAS =================
+
   // 1. TELA DE LOGIN / CADASTRO
   if (mostrarAuth) {
     return (
@@ -113,7 +102,29 @@ function App() {
     return <PainelAdmin onVoltar={() => setMostrarAdmin(false)} />;
   }
 
-  // 3. TELA PRINCIPAL (LANDING PAGE)
+  // 3. TELA DE SUCESSO APÓS PAGAMENTO
+  if (telaSucesso) {
+    return (
+      <div className="dark-theme-app" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: '20px' }}>
+        <div className="auth-modal" style={{ maxWidth: '500px', padding: '40px' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '10px' }}>✅</div>
+          <h2 style={{ color: '#34d399', marginBottom: '15px' }}>Pagamento Aprovado!</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '30px', lineHeight: '1.6' }}>
+            Seu horário na <strong>Barbearia Stylus</strong> foi confirmado com sucesso. O barbeiro já foi notificado e estamos te esperando!
+          </p>
+          <button 
+            className="btn-primary" 
+            onClick={() => setTelaSucesso(false)}
+            style={{ width: '100%' }}
+          >
+            Voltar para a Página Inicial
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. TELA PRINCIPAL (LANDING PAGE)
   return (
     <div className="dark-theme-app">
       
@@ -133,7 +144,7 @@ function App() {
           onClose={() => setServicoSelecionado(null)}
           onSuccess={() => {
             setServicoSelecionado(null);
-            setMensagemSucesso('Horário agendado com sucesso! Te esperamos na barbearia.');
+            setMensagemSucesso('Agendamento iniciado com sucesso.');
             setTimeout(() => setMensagemSucesso(''), 5000);
           }}
         />

@@ -107,9 +107,9 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
           items: [{ title: `Agendamento: ${servico.nome}`, unit_price: Number(servico.valor), quantity: 1, currency_id: 'BRL' }],
           payer: { name: usuario.user_metadata?.nome || 'Cliente', email: usuario.email },
           back_urls: {
-            success: "https://barbeariastylus.vercel.app",
-            failure: "https://barbeariastylus.vercel.app",
-            pending: "https://barbeariastylus.vercel.app"
+            success: "https://barbearia-bk.vercel.app/",
+            failure: "https://barbearia-bk.vercel.app/",
+            pending: "https://barbearia-bk.vercel.app/"
           },
           auto_return: "approved"
         })
