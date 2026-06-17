@@ -5,8 +5,26 @@ import AgendamentoModal from './AgendamentoModal';
 import PainelAdmin from './PainelAdmin';
 import './App.css'; 
 
+// Imagens representativas para os serviços
+const imagemCorte = 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=600&auto=format&fit=crop';
+const imagemBarba = 'https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?q=80&w=600&auto=format&fit=crop';
+const imagemCorteBarba = 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=600&auto=format&fit=crop';
 
-useEffect(() => {
+function App() {
+  const [servicos, setServicos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Estados de Autenticação e Navegação
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
+  const [mostrarAuth, setMostrarAuth] = useState(false);
+  const [mostrarAdmin, setMostrarAdmin] = useState(false);
+  
+  // Estados de Agendamento
+  const [servicoSelecionado, setServicoSelecionado] = useState(null);
+  const [mensagemSucesso, setMensagemSucesso] = useState('');
+
+  // 1. RECEPTOR DO MERCADO PAGO (AGORA DENTRO DA FUNÇÃO!)
+  useEffect(() => {
     // Lê a URL atual do site para procurar os parâmetros do Mercado Pago
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status'); 
@@ -33,27 +51,7 @@ useEffect(() => {
     }
   }, []);
 
-
-
-
-// Imagens representativas para os serviços
-const imagemCorte = 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=600&auto=format&fit=crop';
-const imagemBarba = 'https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?q=80&w=600&auto=format&fit=crop';
-const imagemCorteBarba = 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=600&auto=format&fit=crop';
-
-function App() {
-  const [servicos, setServicos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Estados de Autenticação e Navegação
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
-  const [mostrarAuth, setMostrarAuth] = useState(false);
-  const [mostrarAdmin, setMostrarAdmin] = useState(false);
-  
-  // Estados de Agendamento
-  const [servicoSelecionado, setServicoSelecionado] = useState(null);
-  const [mensagemSucesso, setMensagemSucesso] = useState('');
-
+  // 2. BUSCA DE SERVIÇOS E SESSÃO
   useEffect(() => {
     async function buscarServicos() {
       // Busca serviços ativos no Supabase
