@@ -1,0 +1,23 @@
+/* src/index.css */
+
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #000000; /* Fundo preto da barbearia */
+}
+
+/* Remove a trava de largura e os espaçamentos padrão do Vite */
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
