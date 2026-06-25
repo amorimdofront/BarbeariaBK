@@ -13,8 +13,10 @@
   --price-color: #34d399; /* Verde neon sutil para o preço */
   --price-glow: rgba(52, 211, 153, 0.2);
   --border-color: rgba(255, 255, 255, 0.08);
-  --hero-bg-image: url('https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?q=80&w=2000&auto=format&fit=crop'); /* Imagem de fundo hero */
+   --hero-bg-image: url('./assets/banner.png');
+
 }
+
 
 * {
   margin: 0;
@@ -102,7 +104,7 @@ body {
   position: relative;
   background-image: var(--hero-bg-image);
   background-size: cover;
-  background-position: center;
+ background-position: center 20%;
   padding: 150px 20px;
   text-align: center;
   display: flex;

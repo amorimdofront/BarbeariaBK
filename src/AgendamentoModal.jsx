@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
-// 1. INICIALIZE O MERCADO PAGO COM SUA CHAVE PÚBLICA
 initMercadoPago('TEST-626f2425-396b-4968-a4bb-bc383a65c026', { locale: 'pt-BR' });
 
+const mesesNomes = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 export default function AgendamentoModal({ servico, usuario, onClose, onSuccess }) {
+  const hoje = new Date();
+  const [mesAtivo, setMesAtivo] = useState(hoje.getMonth());
+  const [anoAtivo, setAnoAtivo] = useState(hoje.getFullYear());
+  const [diaSelecionado, setDiaSelecionado] = useState(null);
+
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
   const [horariosDoBanco, setHorariosDoBanco] = useState([]);
@@ -14,235 +23,228 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
   const [erro, setErro] = useState('');
   
   const [preferenceId, setPreferenceId] = useState(null);
-  const [mensagemStatus, setMensagemStatus] = useState(''); // Controla a mensagem automática na tela
+  const [mensagemStatus, setMensagemStatus] = useState('');
+  const [assinatura, setAssinatura] = useState(null);
 
-  // 1. BUSCA HORÁRIOS LIVRES QUANDO A DATA MUDA
+  const diasNoMes = new Date(anoAtivo, mesAtivo + 1, 0).getDate();
+  const listaDias = Array.from({ length: diasNoMes }, (_, i) => i + 1);
+
+  // 1. Verifica se o usuário tem Clube de Assinatura Ativo (AGORA COM CHECAGEM DE VALIDADE!)
+  useEffect(() => {
+    async function checarAssinatura() {
+      const { data } = await supabase
+        .from('assinaturas')
+        .select('*')
+        .eq('cliente_id', usuario.id)
+        .eq('status', 'ativa')
+        .gt('servicos_restantes', 0)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (data && data.length > 0) {
+        const planoAtual = data[0];
+
+        // 🚨 TRAVA DE SEGURANÇA: Checa o vencimento antes de liberar o agendamento grátis
+        if (planoAtual.data_vencimento) {
+          const validade = new Date(planoAtual.data_vencimento);
+          const agora = new Date();
+          
+          if (agora >= validade) {
+            // O plano expirou! Atualiza o banco e NÃO libera o clube no modal
+            await supabase.from('assinaturas').update({ status: 'vencido' }).eq('id', planoAtual.id);
+            setAssinatura(null); 
+            return;
+          }
+        }
+        
+        // Se passou pela trava, libera o benefício do clube
+        setAssinatura(planoAtual);
+      }
+    }
+    checarAssinatura();
+  }, [usuario.id]);
+
+  useEffect(() => {
+    setDiaSelecionado(null); setData(''); setHorario(''); setHorariosDoBanco([]);
+  }, [mesAtivo]);
+
+  const handleDiaClick = (dia) => {
+    setDiaSelecionado(dia);
+    setData(`${anoAtivo}-${String(mesAtivo + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`);
+  };
+
   useEffect(() => {
     if (!data) return;
     async function buscarHorariosLivres() {
-      setLoadingHorarios(true);
-      setHorario(''); 
-      const { data: slots, error } = await supabase
-        .from('horarios_disponiveis')
-        .select('horario')
-        .eq('data', data)
-        .eq('disponivel', true);
-
-      if (!error) {
-        setHorariosDoBanco(slots.map(s => s.horario.substring(0, 5)));
-      }
+      setLoadingHorarios(true); setHorario(''); 
+      const { data: slots, error } = await supabase.from('horarios_disponiveis').select('horario').eq('data', data).eq('disponivel', true).order('horario', { ascending: true });
+      if (!error && slots) setHorariosDoBanco(slots.map(s => s.horario.substring(0, 5)));
       setLoadingHorarios(false);
     }
     buscarHorariosLivres();
   }, [data]);
 
-  // 2. RASTREADOR AUTOMÁTICO DE PAGAMENTO (POLLING)
   useEffect(() => {
     let intervalo;
-
-    // Só começa a rastrear se a cobrança já foi gerada na tela
     if (preferenceId) {
       intervalo = setInterval(async () => {
         try {
           const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
-          
-          // Pergunta ao Mercado Pago se existe algum pagamento atrelado a esta cobrança
-          const response = await fetch(`https://api.mercadopago.com/v1/payments/search?preference_id=${preferenceId}`, {
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
-          });
-          
+          const response = await fetch(`https://api.mercadopago.com/v1/payments/search?preference_id=${preferenceId}`, { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
           const dataMP = await response.json();
 
-          // Se achou um pagamento, verifica o status
           if (dataMP.results && dataMP.results.length > 0) {
             const pagamento = dataMP.results[0];
-
             if (pagamento.status === 'approved') {
-              clearInterval(intervalo); // Para o rastreamento
+              clearInterval(intervalo); 
               setMensagemStatus('✅ Pagamento Aprovado! Seu horário está confirmado.');
-              
-              // Atualiza o Supabase automaticamente
-              await supabase
-                .from('agendamentos')
-                .update({ status_pagamento: 'aprovado', status: 'confirmado' })
-                .eq('pagamento_id', preferenceId);
-
-              // Espera 3 segundos para o cliente ler a mensagem e fecha o modal
-              setTimeout(() => {
-                onSuccess(); 
-              }, 3000);
-              
+              await supabase.from('agendamentos').update({ status_pagamento: 'aprovado', status: 'confirmado' }).eq('pagamento_id', preferenceId);
+              setTimeout(() => onSuccess(), 3000);
             } else if (pagamento.status === 'rejected') {
               setMensagemStatus('❌ Pagamento recusado pelo cartão. Tente novamente.');
             }
           }
-        } catch (err) {
-          console.error("Erro no rastreio do pagamento:", err);
-        }
-      }, 4000); // Executa a cada 4 segundos
+        } catch (err) { console.error("Erro:", err); }
+      }, 4000); 
     }
-
-    // Limpa o rastreador se o cliente fechar o modal antes
     return () => clearInterval(intervalo);
   }, [preferenceId, onSuccess]);
 
-
-  // 3. GERA A COBRANÇA
   const gerarPagamento = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErro('');
+    e.preventDefault(); setLoading(true); setErro('');
+
+    const dataHoraInicio = new Date(`${data}T${horario}:00-03:00`);
+    const dataHoraFim = new Date(dataHoraInicio.getTime() + (servico.duracao_minutos || 30) * 60000);
+
+    if (isNaN(dataHoraInicio.getTime())) { setErro("Formato de data ou horário inválido."); setLoading(false); return; }
 
     try {
-      const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
+      if (assinatura) {
+        // FLUXO SÓCIO: Apenas agenda, o desconto ocorre no "Concluir" do Painel Admin
+        const { error: dbError } = await supabase.from('agendamentos').insert([{
+          cliente_id: usuario.id, servico_id: servico.id, data_hora_inicio: dataHoraInicio.toISOString(),
+          data_hora_fim: dataHoraFim.toISOString(), status: 'confirmado', status_pagamento: 'aprovado',
+          usado_credito_assinatura: true, metodo_pagamento: 'credito_assinatura'
+        }]);
+        if (dbError) throw new Error(`Falha: ${dbError.message}`);
 
-      console.log("1. Iniciando chamada ao Mercado Pago...");
-      const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          items: [{ title: `Agendamento: ${servico.nome}`, unit_price: Number(servico.valor), quantity: 1, currency_id: 'BRL' }],
-          payer: { name: usuario.user_metadata?.nome || 'Cliente', email: usuario.email },
-          back_urls: {
-            success: "https://barbearia-bk.vercel.app/",
-            failure: "https://barbearia-bk.vercel.app/",
-            pending: "https://barbearia-bk.vercel.app/"
-          },
-          auto_return: "approved"
-        })
-      });
+        const { error: updateError } = await supabase.from('horarios_disponiveis').update({ disponivel: false }).eq('data', data).eq('horario', `${horario}:00`);
+        if (updateError) throw new Error(`Falha: ${updateError.message}`);
 
-      const dataMP = await response.json();
-      console.log("2. Resposta bruta do Mercado Pago:", dataMP);
-
-      if (dataMP.id) {
-        console.log("3. Preference ID gerado com sucesso:", dataMP.id);
-        
-        // Validação das datas para evitar quebras de fuso horário
-        const dataHoraInicio = new Date(`${data}T${horario}:00-03:00`);
-        const dataHoraFim = new Date(dataHoraInicio.getTime() + (servico.duracao_minutos || 30) * 60000);
-
-        if (isNaN(dataHoraInicio.getTime())) {
-          throw new Error("Formato de data ou horário inválido.");
-        }
-
-        console.log("4. Tentando inserir agendamento no Supabase...");
-        const { error: dbError } = await supabase
-          .from('agendamentos')
-          .insert([{
-            cliente_id: usuario.id,
-            servico_id: servico.id,
-            pagamento_id: dataMP.id,
-            data_hora_inicio: dataHoraInicio.toISOString(),
-            data_hora_fim: dataHoraFim.toISOString(),
-            status: 'pendente',
-            status_pagamento: 'aguardando',
-            metodo_pagamento: 'mercado_pago'
-          }]);
-
-        if (dbError) {
-          console.error("❌ Erro retornado pelo Supabase:", dbError);
-          setErro(`Erro no Banco: [${dbError.code}] ${dbError.message}`);
-          return;
-        }
-
-        console.log("5. Agendamento criado! Atualizando tabela de horários...");
-        const { error: slotError } = await supabase
-          .from('horarios_disponiveis')
-          .update({ disponivel: false })
-          .eq('data', data)
-          .eq('horario', `${horario}:00`);
-
-        if (slotError) {
-          console.error("⚠️ Erro ao ocupar horário:", slotError);
-        }
-
-        // Só exibe o botão do Mercado Pago se salvou tudo corretamente
-        setPreferenceId(dataMP.id); 
+        setMensagemStatus('🌟 Agendamento reservado pelo seu PLANO BK!');
+        setTimeout(() => onSuccess(), 2500);
 
       } else {
-        console.error("❌ Mercado Pago rejeitou os parâmetros:", dataMP);
-        setErro('Erro Mercado Pago: ' + (dataMP.message || 'Parâmetros inválidos.'));
+        // FLUXO NORMAL (MERCADO PAGO)
+        const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
+        const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [{ title: `Agendamento: ${servico.nome}`, unit_price: Number(servico.valor), quantity: 1, currency_id: 'BRL' }],
+            payer: { name: usuario.user_metadata?.nome || 'Cliente', email: usuario.email },
+            back_urls: { success: "https://barbearia-bk.vercel.app/", failure: "https://barbearia-bk.vercel.app/", pending: "https://barbearia-bk.vercel.app/" },
+            auto_return: "approved"
+          })
+        });
+
+        const dataMP = await response.json();
+
+        if (dataMP.id) {
+          const { error: dbError } = await supabase.from('agendamentos').insert([{
+            cliente_id: usuario.id, servico_id: servico.id, pagamento_id: dataMP.id,
+            data_hora_inicio: dataHoraInicio.toISOString(), data_hora_fim: dataHoraFim.toISOString(),
+            status: 'pendente', status_pagamento: 'aguardando', metodo_pagamento: 'mercado_pago'
+          }]);
+          if (dbError) throw new Error(`Falha: ${dbError.message}`);
+          setPreferenceId(dataMP.id); 
+        } else {
+          throw new Error('Erro Mercado Pago: ' + (dataMP.message || 'Parâmetros inválidos.'));
+        }
       }
-
-    } catch (err) {
-      console.error("❌ Erro capturado no bloco catch:", err);
-      setErro('Falha no processo: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setErro(err.message); } finally { setLoading(false); }
   };
-
-  const dataDeHoje = new Date().toISOString().split('T')[0];
 
   return (
     <div className="auth-overlay">
-      <div className="auth-modal agendamento-modal">
-        <button className="btn-fechar" onClick={onClose} disabled={preferenceId || mensagemStatus.includes('✅')}>✕</button>
-        
-        <div className="auth-header">
-          <h2>Agendar {servico.nome}</h2>
-        </div>
-
+      <div className="auth-modal agendamento-modal" style={{ maxWidth: '600px', width: '95%' }}>
+        <button className="btn-fechar" onClick={onClose} disabled={preferenceId || mensagemStatus.includes('✅') || mensagemStatus.includes('🌟')}>✕</button>
+        <div className="auth-header"><h2>Agendar {servico.nome}</h2></div>
         {erro && <div className="alerta erro">{erro}</div>}
+
+        {assinatura && !preferenceId && !mensagemStatus && (
+          <div style={{ background: 'rgba(243, 156, 18, 0.15)', border: '1px solid #f39c12', color: '#f39c12', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontWeight: 'bold', textAlign: 'center' }}>
+            🌟 Sócio Clube BK: O crédito será descontado após a conclusão do serviço no salão. ({assinatura.servicos_restantes} restantes)
+          </div>
+        )}
 
         {preferenceId ? (
           <div className="checkout-container" style={{ textAlign: 'center', marginTop: '20px' }}>
             <p style={{ color: 'var(--text-muted)' }}>Finalize o pagamento de R$ {servico.valor.toFixed(2)} abaixo:</p>
-            
             <div style={{ pointerEvents: mensagemStatus.includes('✅') ? 'none' : 'auto', opacity: mensagemStatus.includes('✅') ? 0.5 : 1 }}>
               <Wallet initialization={{ preferenceId: preferenceId }} customization={{ texts: { valueProp: 'security_safety' } }} />
             </div>
-
-            {/* MENSAGEM DINÂMICA AO INVÉS DO BOTÃO */}
-            {mensagemStatus ? (
-              <p style={{ 
-                marginTop: '20px', 
-                fontWeight: 'bold', 
-                fontSize: '1.1rem',
-                color: mensagemStatus.includes('✅') ? '#34d399' : '#ef4444' 
-              }}>
-                {mensagemStatus}
-              </p>
-            ) : (
-              <p style={{ color: '#fbbf24', marginTop: '20px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span className="spinner" style={{ width: '16px', height: '16px', borderTopColor: '#fbbf24' }}></span>
-                Aguardando pagamento...
-              </p>
+            {mensagemStatus ? ( <p style={{ marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem', color: mensagemStatus.includes('✅') ? '#34d399' : '#ef4444' }}>{mensagemStatus}</p> ) : (
+              <p style={{ color: '#fbbf24', marginTop: '20px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><span className="spinner" style={{ width: '16px', height: '16px', borderTopColor: '#fbbf24' }}></span>Aguardando pagamento...</p>
             )}
-            
           </div>
+        ) : mensagemStatus.includes('🌟') ? (
+            <div style={{ textAlign: 'center', padding: '30px' }}><div style={{ fontSize: '3rem', marginBottom: '10px' }}>✂️</div><h3 style={{ color: '#34d399' }}>{mensagemStatus}</h3></div>
         ) : (
           <form onSubmit={gerarPagamento} className="auth-form">
-            <div className="input-group">
-              <label>Data</label>
-              <input type="date" required min={dataDeHoje} value={data} onChange={(e) => setData(e.target.value)} />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
+              <button type="button" onClick={() => setAnoAtivo(anoAtivo - 1)} disabled={anoAtivo <= hoje.getFullYear()} style={{ background: 'none', border: 'none', color: anoAtivo <= hoje.getFullYear() ? '#333' : '#f39c12', fontSize: '1.5rem', cursor: anoAtivo <= hoje.getFullYear() ? 'not-allowed' : 'pointer' }}>◀</button>
+              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>{anoAtivo}</span>
+              <button type="button" onClick={() => setAnoAtivo(anoAtivo + 1)} style={{ background: 'none', border: 'none', color: '#f39c12', fontSize: '1.5rem', cursor: 'pointer' }}>▶</button>
+            </div>
+
+            <div className="seletor-meses">
+              {mesesNomes.map((mes, index) => {
+                const isMesPassado = index < hoje.getMonth() && anoAtivo === hoje.getFullYear();
+                return ( <button key={mes} type="button" className={`mes-item ${mesAtivo === index ? 'ativo' : ''} ${isMesPassado ? 'passado' : ''}`} onClick={() => { if (!isMesPassado) setMesAtivo(index); }} disabled={isMesPassado}>{mes}</button> );
+              })}
+            </div>
+
+            <div className="grid-dias">
+              {listaDias.map(dia => {
+                  const isDiaPassado = dia < hoje.getDate() && mesAtivo === hoje.getMonth() && anoAtivo === hoje.getFullYear();
+                  return ( <button key={dia} type="button" disabled={isDiaPassado} className={`dia-item ${diaSelecionado === dia ? 'selecionado' : ''} ${isDiaPassado ? 'desabilitado' : ''}`} onClick={() => handleDiaClick(dia)}>{dia}</button> )
+              })}
             </div>
 
             {data && (
-              <div className="input-group">
-                <label>Horários Disponíveis</label>
-                {loadingHorarios ? <p style={{ color: '#94a3b8' }}>Buscando vagas...</p> : 
+              <div className="horarios-section" style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-muted)' }}>Horários para dia {diaSelecionado} de {mesesNomes[mesAtivo]}</label>
+                {loadingHorarios ? ( <p style={{ color: '#fbbf24', textAlign: 'center' }}>Buscando vagas...</p> ) : horariosDoBanco.length > 0 ? (
                   <div className="grid-horarios">
-                    {horariosDoBanco.map(h => (
-                      <button key={h} type="button" className={`btn-horario ${horario === h ? 'selecionado' : ''}`} onClick={() => setHorario(h)}>
-                        {h}
-                      </button>
-                    ))}
+                    {horariosDoBanco.map(h => ( <button key={h} type="button" className={`btn-horario ${horario === h ? 'selecionado' : ''}`} onClick={() => setHorario(h)}>{h}</button> ))}
                   </div>
-                }
+                ) : ( <p style={{ color: '#ef4444', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>Nenhum horário disponível.</p> )}
               </div>
             )}
-
-            <button type="submit" className="auth-submit" disabled={loading || !data || !horario} style={{ marginTop: '20px' }}>
-              {loading ? 'Processando...' : 'Ir para Pagamento'}
+            <button type="submit" className="auth-submit" disabled={loading || !data || !horario} style={{ marginTop: '25px', width: '100%', padding: '15px' }}>
+              {loading ? 'Processando...' : assinatura ? 'Confirmar Agendamento' : `Ir para Pagamento (R$ ${servico.valor.toFixed(2)})`}
             </button>
           </form>
         )}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .seletor-meses { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; scrollbar-width: none; }
+        .seletor-meses::-webkit-scrollbar { display: none; }
+        .mes-item { background: none; border: none; color: #888; font-size: 1rem; cursor: pointer; white-space: nowrap; padding: 5px 10px; transition: 0.3s; outline: none; }
+        .mes-item.ativo { color: #f39c12; font-weight: bold; border-bottom: 2px solid #f39c12; }
+        .mes-item.passado { opacity: 0.3; cursor: not-allowed; }
+        .grid-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 10px; }
+        .dia-item { background: #222; border: 1px solid #333; color: white; padding: 12px 5px; border-radius: 8px; cursor: pointer; transition: 0.2s; text-align: center; font-size: 1rem; }
+        .dia-item:hover:not(.desabilitado) { background: #333; border-color: #f39c12; }
+        .dia-item.selecionado { background: #f39c12; color: black; border-color: #f39c12; font-weight: bold; }
+        .dia-item.desabilitado { opacity: 0.2; cursor: not-allowed; background: #111; border-color: #222; }
+        .grid-horarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+        .btn-horario { background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1rem; }
+        .btn-horario:hover { border-color: #f39c12; }
+        .btn-horario.selecionado { background: #34d399; border-color: #34d399; color: black; font-weight: bold; }
+      `}} />
     </div>
   );
 }
