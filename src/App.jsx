@@ -105,11 +105,11 @@ function App() {
             textTransform: 'uppercase', 
             letterSpacing: '1px' 
           }}>
-            Tudo Certo, Chefia!
+            Tudo Certo!
           </h2>
           
           <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '20px', lineHeight: '1.6' }}>
-            Seu pagamento foi aprovado e o seu horário já está <strong>confirmado</strong> na nossa agenda.
+            Seu pagamento foi <strong>Aprovado</strong>.
           </p>
 
           <div style={{ 
@@ -120,7 +120,7 @@ function App() {
             borderLeft: '4px solid #f39c12' 
           }}>
             <p style={{ margin: 0, color: '#94a3b8', fontStyle: 'italic' }}>
-              "Estilo, Confiança e Atitude. Mais que um corte, uma experiência."
+              "Venha fazer seu corte e ficar novo de novo!"
             </p>
           </div>
 
