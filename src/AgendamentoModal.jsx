@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
@@ -25,13 +25,36 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
   const [preferenceId, setPreferenceId] = useState(null);
   const [mensagemStatus, setMensagemStatus] = useState('');
   const [assinatura, setAssinatura] = useState(null);
+  
+  const [temAgendamentoAberto, setTemAgendamentoAberto] = useState(false);
+  const [loadingVerificacao, setLoadingVerificacao] = useState(true);
+
+  // 🖱️ Lógica para Arrastar os Meses no Computador
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   const diasNoMes = new Date(anoAtivo, mesAtivo + 1, 0).getDate();
   const listaDias = Array.from({ length: diasNoMes }, (_, i) => i + 1);
 
-  // 1. Verifica se o usuário tem Clube de Assinatura Ativo (AGORA COM CHECAGEM DE VALIDADE!)
   useEffect(() => {
-    async function checarAssinatura() {
+    async function verificarRegrasCliente() {
+      setLoadingVerificacao(true);
+      
+      const { data: agendamentosConfirmados } = await supabase
+        .from('agendamentos')
+        .select('id')
+        .eq('cliente_id', usuario.id)
+        .eq('status', 'confirmado') 
+        .limit(1);
+        
+      if (agendamentosConfirmados && agendamentosConfirmados.length > 0) {
+        setTemAgendamentoAberto(true);
+        setLoadingVerificacao(false);
+        return; 
+      }
+
       const { data } = await supabase
         .from('assinaturas')
         .select('*')
@@ -43,25 +66,22 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
       
       if (data && data.length > 0) {
         const planoAtual = data[0];
-
-        // 🚨 TRAVA DE SEGURANÇA: Checa o vencimento antes de liberar o agendamento grátis
         if (planoAtual.data_vencimento) {
           const validade = new Date(planoAtual.data_vencimento);
           const agora = new Date();
-          
           if (agora >= validade) {
-            // O plano expirou! Atualiza o banco e NÃO libera o clube no modal
             await supabase.from('assinaturas').update({ status: 'vencido' }).eq('id', planoAtual.id);
             setAssinatura(null); 
+            setLoadingVerificacao(false);
             return;
           }
         }
-        
-        // Se passou pela trava, libera o benefício do clube
         setAssinatura(planoAtual);
       }
+      
+      setLoadingVerificacao(false);
     }
-    checarAssinatura();
+    verificarRegrasCliente();
   }, [usuario.id]);
 
   useEffect(() => {
@@ -120,7 +140,6 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
 
     try {
       if (assinatura) {
-        // FLUXO SÓCIO: Apenas agenda, o desconto ocorre no "Concluir" do Painel Admin
         const { error: dbError } = await supabase.from('agendamentos').insert([{
           cliente_id: usuario.id, servico_id: servico.id, data_hora_inicio: dataHoraInicio.toISOString(),
           data_hora_fim: dataHoraFim.toISOString(), status: 'confirmado', status_pagamento: 'aprovado',
@@ -135,7 +154,6 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
         setTimeout(() => onSuccess(), 2500);
 
       } else {
-        // FLUXO NORMAL (MERCADO PAGO)
         const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
         const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
           method: 'POST',
@@ -165,72 +183,133 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
     } catch (err) { setErro(err.message); } finally { setLoading(false); }
   };
 
+  // Funções para controle do arrastar dos meses e cliques nas setas
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Velocidade do arrasto
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+  const scrollarMeses = (direcao) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: direcao === 'esq' ? -150 : 150, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="auth-overlay">
       <div className="auth-modal agendamento-modal" style={{ maxWidth: '600px', width: '95%' }}>
         <button className="btn-fechar" onClick={onClose} disabled={preferenceId || mensagemStatus.includes('✅') || mensagemStatus.includes('🌟')}>✕</button>
         <div className="auth-header"><h2>Agendar {servico.nome}</h2></div>
+        
         {erro && <div className="alerta erro">{erro}</div>}
 
-        {assinatura && !preferenceId && !mensagemStatus && (
-          <div style={{ background: 'rgba(243, 156, 18, 0.15)', border: '1px solid #f39c12', color: '#f39c12', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontWeight: 'bold', textAlign: 'center' }}>
-            🌟 Sócio Clube BK: O crédito será descontado após a conclusão do serviço no salão. ({assinatura.servicos_restantes} restantes)
+        {loadingVerificacao ? (
+          <div style={{ textAlign: 'center', padding: '30px', color: '#f39c12' }}>
+            <span className="spinner" style={{ width: '30px', height: '30px', borderTopColor: '#f39c12', marginBottom: '15px' }}></span>
+            <p>Verificando sua conta...</p>
           </div>
-        )}
-
-        {preferenceId ? (
-          <div className="checkout-container" style={{ textAlign: 'center', marginTop: '20px' }}>
-            <p style={{ color: 'var(--text-muted)' }}>Finalize o pagamento de R$ {servico.valor.toFixed(2)} abaixo:</p>
-            <div style={{ pointerEvents: mensagemStatus.includes('✅') ? 'none' : 'auto', opacity: mensagemStatus.includes('✅') ? 0.5 : 1 }}>
-              <Wallet initialization={{ preferenceId: preferenceId }} customization={{ texts: { valueProp: 'security_safety' } }} />
-            </div>
-            {mensagemStatus ? ( <p style={{ marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem', color: mensagemStatus.includes('✅') ? '#34d399' : '#ef4444' }}>{mensagemStatus}</p> ) : (
-              <p style={{ color: '#fbbf24', marginTop: '20px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><span className="spinner" style={{ width: '16px', height: '16px', borderTopColor: '#fbbf24' }}></span>Aguardando pagamento...</p>
-            )}
+        ) : temAgendamentoAberto ? (
+          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '20px', borderRadius: '8px', textAlign: 'center', margin: '20px 0' }}>
+            <h3 style={{ margin: '0 0 10px 0' }}>⚠️ Agendamento Bloqueado</h3>
+            <p style={{ margin: 0 }}>Você já possui um agendamento em aberto. Conclua ou peça para cancelar seu serviço pendente antes de marcar um novo horário.</p>
           </div>
-        ) : mensagemStatus.includes('🌟') ? (
-            <div style={{ textAlign: 'center', padding: '30px' }}><div style={{ fontSize: '3rem', marginBottom: '10px' }}>✂️</div><h3 style={{ color: '#34d399' }}>{mensagemStatus}</h3></div>
         ) : (
-          <form onSubmit={gerarPagamento} className="auth-form">
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
-              <button type="button" onClick={() => setAnoAtivo(anoAtivo - 1)} disabled={anoAtivo <= hoje.getFullYear()} style={{ background: 'none', border: 'none', color: anoAtivo <= hoje.getFullYear() ? '#333' : '#f39c12', fontSize: '1.5rem', cursor: anoAtivo <= hoje.getFullYear() ? 'not-allowed' : 'pointer' }}>◀</button>
-              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>{anoAtivo}</span>
-              <button type="button" onClick={() => setAnoAtivo(anoAtivo + 1)} style={{ background: 'none', border: 'none', color: '#f39c12', fontSize: '1.5rem', cursor: 'pointer' }}>▶</button>
-            </div>
-
-            <div className="seletor-meses">
-              {mesesNomes.map((mes, index) => {
-                const isMesPassado = index < hoje.getMonth() && anoAtivo === hoje.getFullYear();
-                return ( <button key={mes} type="button" className={`mes-item ${mesAtivo === index ? 'ativo' : ''} ${isMesPassado ? 'passado' : ''}`} onClick={() => { if (!isMesPassado) setMesAtivo(index); }} disabled={isMesPassado}>{mes}</button> );
-              })}
-            </div>
-
-            <div className="grid-dias">
-              {listaDias.map(dia => {
-                  const isDiaPassado = dia < hoje.getDate() && mesAtivo === hoje.getMonth() && anoAtivo === hoje.getFullYear();
-                  return ( <button key={dia} type="button" disabled={isDiaPassado} className={`dia-item ${diaSelecionado === dia ? 'selecionado' : ''} ${isDiaPassado ? 'desabilitado' : ''}`} onClick={() => handleDiaClick(dia)}>{dia}</button> )
-              })}
-            </div>
-
-            {data && (
-              <div className="horarios-section" style={{ marginTop: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-muted)' }}>Horários para dia {diaSelecionado} de {mesesNomes[mesAtivo]}</label>
-                {loadingHorarios ? ( <p style={{ color: '#fbbf24', textAlign: 'center' }}>Buscando vagas...</p> ) : horariosDoBanco.length > 0 ? (
-                  <div className="grid-horarios">
-                    {horariosDoBanco.map(h => ( <button key={h} type="button" className={`btn-horario ${horario === h ? 'selecionado' : ''}`} onClick={() => setHorario(h)}>{h}</button> ))}
-                  </div>
-                ) : ( <p style={{ color: '#ef4444', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>Nenhum horário disponível.</p> )}
+          <>
+            {assinatura && !preferenceId && !mensagemStatus && (
+              <div style={{ background: 'rgba(243, 156, 18, 0.15)', border: '1px solid #f39c12', color: '#f39c12', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontWeight: 'bold', textAlign: 'center' }}>
+                🌟 Sócio Clube BK: O crédito será descontado após a conclusão do serviço no salão. ({assinatura.servicos_restantes} restantes)
               </div>
             )}
-            <button type="submit" className="auth-submit" disabled={loading || !data || !horario} style={{ marginTop: '25px', width: '100%', padding: '15px' }}>
-              {loading ? 'Processando...' : assinatura ? 'Confirmar Agendamento' : `Ir para Pagamento (R$ ${servico.valor.toFixed(2)})`}
-            </button>
-          </form>
+
+            {preferenceId ? (
+              <div className="checkout-container" style={{ textAlign: 'center', marginTop: '20px' }}>
+                <p style={{ color: 'var(--text-muted)' }}>Finalize o pagamento de R$ {servico.valor.toFixed(2)} abaixo:</p>
+                <div style={{ pointerEvents: mensagemStatus.includes('✅') ? 'none' : 'auto', opacity: mensagemStatus.includes('✅') ? 0.5 : 1 }}>
+                  <Wallet initialization={{ preferenceId: preferenceId }} customization={{ texts: { valueProp: 'security_safety' } }} />
+                </div>
+                {mensagemStatus ? ( <p style={{ marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem', color: mensagemStatus.includes('✅') ? '#34d399' : '#ef4444' }}>{mensagemStatus}</p> ) : (
+                  <p style={{ color: '#fbbf24', marginTop: '20px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><span className="spinner" style={{ width: '16px', height: '16px', borderTopColor: '#fbbf24' }}></span>Aguardando pagamento...</p>
+                )}
+              </div>
+            ) : mensagemStatus.includes('🌟') ? (
+                <div style={{ textAlign: 'center', padding: '30px' }}><div style={{ fontSize: '3rem', marginBottom: '10px' }}>✂️</div><h3 style={{ color: '#34d399' }}>{mensagemStatus}</h3></div>
+            ) : (
+              <form onSubmit={gerarPagamento} className="auth-form">
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
+                  <button type="button" onClick={() => setAnoAtivo(anoAtivo - 1)} disabled={anoAtivo <= hoje.getFullYear()} style={{ background: 'none', border: 'none', color: anoAtivo <= hoje.getFullYear() ? '#333' : '#f39c12', fontSize: '1.5rem', cursor: anoAtivo <= hoje.getFullYear() ? 'not-allowed' : 'pointer' }}>◀</button>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>{anoAtivo}</span>
+                  <button type="button" onClick={() => setAnoAtivo(anoAtivo + 1)} style={{ background: 'none', border: 'none', color: '#f39c12', fontSize: '1.5rem', cursor: 'pointer' }}>▶</button>
+                </div>
+
+                {/* 🖱️ NOVO SELETOR DE MESES COM SETAS E ARRASTE */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
+                  <button type="button" onClick={() => scrollarMeses('esq')} style={{ background: 'none', border: 'none', color: '#f39c12', fontSize: '1.2rem', cursor: 'pointer', padding: '0 5px' }}>❮</button>
+                  
+                  <div 
+                    className={`seletor-meses ${isDragging ? 'arrastando' : ''}`}
+                    ref={scrollRef}
+                    onMouseDown={handleMouseDown}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                  >
+                    {mesesNomes.map((mes, index) => {
+                      const isMesPassado = index < hoje.getMonth() && anoAtivo === hoje.getFullYear();
+                      return ( 
+                        <button 
+                          key={mes} 
+                          type="button" 
+                          className={`mes-item ${mesAtivo === index ? 'ativo' : ''} ${isMesPassado ? 'passado' : ''}`} 
+                          onClick={() => { if (!isMesPassado && !isDragging) setMesAtivo(index); }} 
+                          disabled={isMesPassado}
+                        >
+                          {mes}
+                        </button> 
+                      );
+                    })}
+                  </div>
+
+                  <button type="button" onClick={() => scrollarMeses('dir')} style={{ background: 'none', border: 'none', color: '#f39c12', fontSize: '1.2rem', cursor: 'pointer', padding: '0 5px' }}>❯</button>
+                </div>
+
+                <div className="grid-dias">
+                  {listaDias.map(dia => {
+                      const isDiaPassado = dia < hoje.getDate() && mesAtivo === hoje.getMonth() && anoAtivo === hoje.getFullYear();
+                      return ( <button key={dia} type="button" disabled={isDiaPassado} className={`dia-item ${diaSelecionado === dia ? 'selecionado' : ''} ${isDiaPassado ? 'desabilitado' : ''}`} onClick={() => handleDiaClick(dia)}>{dia}</button> )
+                  })}
+                </div>
+
+                {data && (
+                  <div className="horarios-section" style={{ marginTop: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-muted)' }}>Horários para dia {diaSelecionado} de {mesesNomes[mesAtivo]}</label>
+                    {loadingHorarios ? ( <p style={{ color: '#fbbf24', textAlign: 'center' }}>Buscando vagas...</p> ) : horariosDoBanco.length > 0 ? (
+                      <div className="grid-horarios">
+                        {horariosDoBanco.map(h => ( <button key={h} type="button" className={`btn-horario ${horario === h ? 'selecionado' : ''}`} onClick={() => setHorario(h)}>{h}</button> ))}
+                      </div>
+                    ) : ( <p style={{ color: '#ef4444', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>Nenhum horário disponível.</p> )}
+                  </div>
+                )}
+                <button type="submit" className="auth-submit" disabled={loading || !data || !horario} style={{ marginTop: '25px', width: '100%', padding: '15px' }}>
+                  {loading ? 'Processando...' : assinatura ? 'Confirmar Agendamento' : `Ir para Pagamento (R$ ${servico.valor.toFixed(2)})`}
+                </button>
+              </form>
+            )}
+          </>
         )}
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .seletor-meses { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; scrollbar-width: none; }
+        .seletor-meses { display: flex; overflow-x: auto; gap: 15px; scrollbar-width: none; flex: 1; cursor: grab; padding: 5px 0; }
+        .seletor-meses.arrastando { cursor: grabbing; }
         .seletor-meses::-webkit-scrollbar { display: none; }
         .mes-item { background: none; border: none; color: #888; font-size: 1rem; cursor: pointer; white-space: nowrap; padding: 5px 10px; transition: 0.3s; outline: none; }
         .mes-item.ativo { color: #f39c12; font-weight: bold; border-bottom: 2px solid #f39c12; }

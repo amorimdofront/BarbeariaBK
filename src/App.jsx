@@ -58,18 +58,98 @@ function App() {
   if (mostrarPerfil && usuarioLogado) return <PerfilCliente usuario={usuarioLogado} onVoltar={() => setMostrarPerfil(false)} onIrParaPlanos={() => { setMostrarPerfil(false); setMostrarPlanos(true); }} />;
   if (mostrarPlanos && usuarioLogado) return <LojaPlanos usuario={usuarioLogado} onVoltar={() => setMostrarPlanos(false)} />;
 
+  // ====== TELA DE SUCESSO PREMIUM ======
   if (telaSucesso) {
     return (
-      <div className="dark-theme-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '20px' }}>
-        <div className="auth-modal" style={{ textAlign: 'center', maxWidth: '500px' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '10px' }}>✅</div>
-          <h2 style={{ color: '#34d399', marginBottom: '15px' }}>Tudo Certo!</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Operação concluída com sucesso. Estamos te esperando!</p>
-          <button className="btn-primary" onClick={() => setTelaSucesso(false)} style={{ width: '100%' }}>Voltar ao Início</button>
+      <div className="dark-theme-app" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh', 
+        padding: '20px',
+        background: 'linear-gradient(135deg, #000000 0%, #111111 100%)' // Fundo mais denso
+      }}>
+        <div className="auth-modal" style={{ 
+          textAlign: 'center', 
+          maxWidth: '500px',
+          width: '100%',
+          background: '#151515', 
+          border: '1px solid #f39c12', // Borda dourada
+          borderRadius: '16px', 
+          padding: '40px 30px', 
+          boxShadow: '0 10px 40px rgba(243, 156, 18, 0.15)' // Brilho suave dourado
+        }}>
+          
+          <div style={{ 
+            width: '80px', 
+            height: '80px', 
+            background: 'rgba(243, 156, 18, 0.1)', 
+            borderRadius: '50%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            margin: '0 auto 20px', 
+            border: '2px solid #f39c12' 
+          }}>
+            {/* Ícone SVG de Check estilisado */}
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+
+          <h2 style={{ 
+            color: '#f39c12', 
+            marginBottom: '10px', 
+            fontSize: '2.2rem', 
+            textTransform: 'uppercase', 
+            letterSpacing: '1px' 
+          }}>
+            Tudo Certo, Chefia!
+          </h2>
+          
+          <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '20px', lineHeight: '1.6' }}>
+            Seu pagamento foi aprovado e o seu horário já está <strong>confirmado</strong> na nossa agenda.
+          </p>
+
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.03)', 
+            padding: '15px', 
+            borderRadius: '8px', 
+            marginBottom: '30px', 
+            borderLeft: '4px solid #f39c12' 
+          }}>
+            <p style={{ margin: 0, color: '#94a3b8', fontStyle: 'italic' }}>
+              "Estilo, Confiança e Atitude. Mais que um corte, uma experiência."
+            </p>
+          </div>
+
+          <button 
+            onClick={() => setTelaSucesso(false)} 
+            style={{ 
+              width: '100%', 
+              padding: '15px', 
+              fontSize: '1.1rem', 
+              background: '#f39c12', 
+              color: 'black', 
+              fontWeight: 'bold', 
+              textTransform: 'uppercase', 
+              letterSpacing: '1px',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'background 0.3s'
+            }}
+            onMouseOver={(e) => e.target.style.background = '#d68910'}
+            onMouseOut={(e) => e.target.style.background = '#f39c12'}
+          >
+            Voltar ao Início
+          </button>
         </div>
       </div>
     );
   }
+  // =====================================
 
   return (
     <div className="dark-theme-app">

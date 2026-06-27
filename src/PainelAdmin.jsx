@@ -68,14 +68,30 @@ export default function PainelAdmin({ onVoltar }) {
           .select('id, data_hora_inicio, status, status_pagamento, usado_credito_assinatura, cliente_id, clientes(nome, telefone), servicos(nome, valor)')
           .order('data_hora_inicio', { ascending: true });
         setAgendamentos(data || []);
+
       } else if (abaAtiva === 'servicos') {
         const { data } = await supabase.from('servicos').select('*').order('nome');
         setServicos(data || []);
+
       } else if (abaAtiva === 'config_agenda') {
+        // Traz as vagas livres
         const { data } = await supabase.from('horarios_disponiveis').select('*').gte('data', new Date().toISOString().split('T')[0]).order('data', { ascending: true }).order('horario', { ascending: true });
         setAgendaCriada(data || []);
-      } else if (abaAtiva === 'clientes' || abaAtiva === 'config_agenda') {
-        // Carrega clientes também na aba config_agenda para poder fazer a reserva manual
+
+        // CORREÇÃO: Traz os clientes e serviços para preencher os selects do Modal de Reserva
+        const { data: listaClientes } = await supabase.from('clientes').select('*').order('nome');
+        const { data: listaAssinaturas } = await supabase.from('assinaturas').select('*').order('created_at', { ascending: false });
+        
+        const unificados = (listaClientes || []).map(cli => {
+          let ass = listaAssinaturas?.find(a => a.cliente_id === cli.id);
+          return { ...cli, assinatura: ass || null };
+        });
+        setClientes(unificados);
+
+        const { data: servs } = await supabase.from('servicos').select('*').order('nome');
+        setServicos(servs || []);
+
+      } else if (abaAtiva === 'clientes') {
         const { data: listaClientes } = await supabase.from('clientes').select('*').order('nome');
         const { data: listaAssinaturas } = await supabase.from('assinaturas').select('*').order('created_at', { ascending: false });
         
@@ -91,11 +107,6 @@ export default function PainelAdmin({ onVoltar }) {
           return { ...cli, assinatura: ass || null };
         }));
         setClientes(unificados);
-        
-        if (abaAtiva === 'config_agenda') {
-            const { data: servs } = await supabase.from('servicos').select('*').order('nome');
-            setServicos(servs || []);
-        }
       }
     } catch (error) { console.error(error); }
     setLoading(false);
@@ -109,7 +120,7 @@ export default function PainelAdmin({ onVoltar }) {
       clienteId: '',
       nomeNovo: '',
       telefoneNovo: '',
-      servicoId: servicos.length > 0 ? servicos[0].id : '',
+      servicoId: '',
       usarCredito: false
     });
     setMensagemReserva({ tipo: '', texto: '' });
@@ -124,11 +135,9 @@ export default function PainelAdmin({ onVoltar }) {
     try {
       let finalClienteId = reservaForm.clienteId;
       
-      // Validação do Cliente
       if (reservaForm.tipoCliente === 'novo') {
         if (!reservaForm.nomeNovo) throw new Error("Motivo da falha: O nome do cliente é obrigatório.");
         
-        // Cria um cliente "avulso" no banco para manter o histórico
         const { data: newCli, error: errCli } = await supabase.from('clientes').insert([{
           nome: reservaForm.nomeNovo,
           telefone: reservaForm.telefoneNovo || null
@@ -145,7 +154,6 @@ export default function PainelAdmin({ onVoltar }) {
 
       let statusPagamento = 'aguardando';
       
-      // Validação Estrita do Crédito
       if (reservaForm.tipoCliente === 'existente' && reservaForm.usarCredito) {
         const clienteSelecionadoData = clientes.find(c => c.id == finalClienteId);
         
@@ -155,19 +163,18 @@ export default function PainelAdmin({ onVoltar }) {
         if (clienteSelecionadoData.assinatura.servicos_restantes <= 0) {
           throw new Error(`Reserva Bloqueada: O cliente ${clienteSelecionadoData.nome} não possui mais créditos (Restam: 0). Você precisa concluir sem descontar plano ou renovar a assinatura dele.`);
         }
-        statusPagamento = 'aprovado'; // Se vai usar crédito, o pagamento já entra aprovado.
+        statusPagamento = 'aprovado'; 
       }
 
       const dataHoraInicio = new Date(`${slotParaReserva.data}T${slotParaReserva.horario}-03:00`);
       const dataHoraFim = new Date(dataHoraInicio.getTime() + (servico.duracao_minutos || 30) * 60000);
 
-      // Insere o Agendamento
       const { error: agError } = await supabase.from('agendamentos').insert([{
         cliente_id: finalClienteId,
         servico_id: servico.id,
         data_hora_inicio: dataHoraInicio.toISOString(),
         data_hora_fim: dataHoraFim.toISOString(),
-        status: 'confirmado', // Como foi o Admin, entra confirmado
+        status: 'confirmado', 
         status_pagamento: statusPagamento,
         usado_credito_assinatura: reservaForm.tipoCliente === 'existente' ? reservaForm.usarCredito : false,
         metodo_pagamento: reservaForm.usarCredito ? 'credito_assinatura' : 'presencial'
@@ -175,12 +182,11 @@ export default function PainelAdmin({ onVoltar }) {
 
       if (agError) throw new Error("Erro do banco de dados ao salvar a reserva: " + agError.message);
 
-      // Fecha a vaga na agenda
       await supabase.from('horarios_disponiveis').update({ disponivel: false }).eq('id', slotParaReserva.id);
 
       setMensagemReserva({ tipo: 'sucesso', texto: '✅ Reserva efetuada com sucesso! Já está na agenda.' });
       
-      await carregarDados(); // Recarrega as vagas
+      await carregarDados(); 
       setTimeout(() => setModalReserva(false), 2000);
 
     } catch (err) {
@@ -656,7 +662,6 @@ export default function PainelAdmin({ onVoltar }) {
         )}
       </div>
 
-      {/* MODAL DE FICHA DO CLIENTE */}
       {clienteSelecionado && (
         <div className="auth-overlay" style={{ zIndex: 999 }}>
           <div className="auth-modal" style={{ width: '90%', maxWidth: '700px', background: '#1a1a1a', padding: '25px', borderRadius: '15px', maxHeight: '90vh', overflowY: 'auto' }}>
