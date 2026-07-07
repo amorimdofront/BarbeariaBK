@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
-initMercadoPago('TEST-626f2425-396b-4968-a4bb-bc383a65c026', { locale: 'pt-BR' });
+initMercadoPago('APP_USR-10e2f768-69f8-4564-81d5-25c8b80fa601', { locale: 'pt-BR' });
 
 const mesesNomes = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -109,7 +109,7 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
     if (preferenceId) {
       intervalo = setInterval(async () => {
         try {
-          const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
+          const ACCESS_TOKEN = 'APP_USR-5888724309282332-121722-f264b12e3b0f72771a5c336e21099951-3074782821';
           const response = await fetch(`https://api.mercadopago.com/v1/payments/search?preference_id=${preferenceId}`, { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
           const dataMP = await response.json();
 
@@ -154,7 +154,7 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
         setTimeout(() => onSuccess(), 2500);
 
       } else {
-        const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
+        const ACCESS_TOKEN = 'APP_USR-5888724309282332-121722-f264b12e3b0f72771a5c336e21099951-3074782821';
         const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
           method: 'POST',
           headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' },

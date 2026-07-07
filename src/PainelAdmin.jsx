@@ -74,11 +74,9 @@ export default function PainelAdmin({ onVoltar }) {
         setServicos(data || []);
 
       } else if (abaAtiva === 'config_agenda') {
-        // Traz as vagas livres
         const { data } = await supabase.from('horarios_disponiveis').select('*').gte('data', new Date().toISOString().split('T')[0]).order('data', { ascending: true }).order('horario', { ascending: true });
         setAgendaCriada(data || []);
 
-        // CORREÇÃO: Traz os clientes e serviços para preencher os selects do Modal de Reserva
         const { data: listaClientes } = await supabase.from('clientes').select('*').order('nome');
         const { data: listaAssinaturas } = await supabase.from('assinaturas').select('*').order('created_at', { ascending: false });
         
@@ -161,7 +159,7 @@ export default function PainelAdmin({ onVoltar }) {
           throw new Error("Motivo da falha: O cliente selecionado não possui um plano ativo no momento.");
         }
         if (clienteSelecionadoData.assinatura.servicos_restantes <= 0) {
-          throw new Error(`Reserva Bloqueada: O cliente ${clienteSelecionadoData.nome} não possui mais créditos (Restam: 0). Você precisa concluir sem descontar plano ou renovar a assinatura dele.`);
+          throw new Error(`Reserva Bloqueada: O cliente ${clienteSelecionadoData.nome} não possui mais créditos. Você precisa concluir sem descontar plano ou renovar a assinatura dele.`);
         }
         statusPagamento = 'aprovado'; 
       }
@@ -195,7 +193,6 @@ export default function PainelAdmin({ onVoltar }) {
       setLoadingReserva(false);
     }
   };
-  // ===================================
 
   const handleUploadImagemServico = async (event) => {
     try {
@@ -306,6 +303,7 @@ export default function PainelAdmin({ onVoltar }) {
     }
   };
 
+  // 🛡️ CORREÇÃO CRÍTICA AQUI: Lógica de desconto e vencimento
   const atualizarStatus = async (ag, novoStatus) => {
     if (processandoAgendamentoId === ag.id) return;
     setProcessandoAgendamentoId(ag.id);
@@ -330,32 +328,39 @@ export default function PainelAdmin({ onVoltar }) {
           await supabase.from('horarios_disponiveis').update({ disponivel: true }).eq('data', `${ano}-${mes}-${dia}`).eq('horario', `${hora}:${minuto}:00`);
         }
 
+        // INÍCIO DO CRONÔMETRO DE VENCIMENTO (SEM DESCONTAR CORTES)
         if (novoStatus === 'concluido') {
           const clienteIdCorreto = ag.cliente_id || clienteSelecionado?.id;
 
-          if (clienteIdCorreto) {
+          if (clienteIdCorreto && ag.usado_credito_assinatura) {
             const { data: planosAtivos } = await supabase
               .from('assinaturas')
               .select('*')
               .eq('cliente_id', clienteIdCorreto)
-              .eq('status', 'ativa')
               .order('created_at', { ascending: false })
               .limit(1);
             
             const assData = planosAtivos?.[0];
             
-            if (assData) {
+            if (assData && assData.status === 'ativa') {
+              // Se a data de vencimento estiver vazia, ativa os 30 dias a partir de agora
               if (!assData.data_vencimento) {
                 const validade = new Date(); 
                 validade.setMonth(validade.getMonth() + 1);
                 const novaDataIso = validade.toISOString();
 
-                await supabase.from('assinaturas').update({ data_vencimento: novaDataIso }).eq('id', assData.id);
+                await supabase.from('assinaturas').update({ 
+                  data_vencimento: novaDataIso
+                  // NOTA: O desconto de (servicos_restantes - 1) foi removido daqui
+                }).eq('id', assData.id);
 
                 if (clienteSelecionado && clienteSelecionado.id === clienteIdCorreto) {
                   setClienteSelecionado(prev => ({
                     ...prev,
-                    assinatura: prev.assinatura ? { ...prev.assinatura, data_vencimento: novaDataIso } : null
+                    assinatura: prev.assinatura ? { 
+                      ...prev.assinatura, 
+                      data_vencimento: novaDataIso
+                    } : null
                   }));
                 }
               }
@@ -378,6 +383,7 @@ export default function PainelAdmin({ onVoltar }) {
       setProcessandoAgendamentoId(null);
     }
   };
+
 
   const gerarHorariosEmMassa = async (e) => {
     e.preventDefault(); setLoading(true);

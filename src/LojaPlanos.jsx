@@ -7,7 +7,7 @@ const PLANOS = [
   { 
     id: 'basico', 
     nome: 'Plano Básico', 
-    valor: 100, 
+    valor: 1, 
     servicos: 4, 
     destaque: false,
     beneficios: ['4 Cortes por mês', 'Desconto em pomadas', 'Agendamento prático'],
@@ -26,7 +26,7 @@ const PLANOS = [
   { 
     id: 'bk', 
     nome: 'Plano BK VIP', 
-    valor: 250, 
+    valor: 250,
     servicos: 4, 
     destaque: true,
     beneficios: ['4 Cortes + Barba', 'Prioridade na Agenda', 'Tratamento de Rei'],
@@ -43,7 +43,7 @@ export default function LojaPlanos({ usuario, onVoltar }) {
     setErro('');
     
     try {
-      const ACCESS_TOKEN = 'TEST-1701025156407162-021100-0422e3248ffbf41bf142bdfd102920ef-266359559';
+      const ACCESS_TOKEN = 'APP_USR-5888724309282332-121722-f264b12e3b0f72771a5c336e21099951-3074782821';
 
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
@@ -60,7 +60,7 @@ export default function LojaPlanos({ usuario, onVoltar }) {
             pending: "https://barbearia-bk.vercel.app/" 
           },
           auto_return: "approved",
-          external_reference: `assinatura_${plano.id}_${usuario.id}`
+          external_reference: `assinatura_${plano.id}_${usuario.id}`,
         })
       });
 
