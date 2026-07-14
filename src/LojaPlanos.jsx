@@ -47,9 +47,9 @@ export default function LojaPlanos({ usuario, onVoltar }) {
           items: [{ title: plano.nome, unit_price: plano.valor, quantity: 1, currency_id: 'BRL' }],
           payer: { name: usuario.user_metadata?.nome || 'Cliente', email: usuario.email },
           back_urls: { 
-            success: "https://barbearia-bk.vercel.app/", 
-            failure: "https://barbearia-bk.vercel.app/", 
-            pending: "https://barbearia-bk.vercel.app/" 
+            success: "https://www.barbeariadobakana.com/", 
+            failure: "https://www.barbeariadobakana.com/", 
+            pending: "https://www.barbeariadobakana.com/" ,
           },
           auto_return: "approved",
           external_reference: `assinatura_${plano.id}_${usuario.id}`,

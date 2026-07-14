@@ -237,7 +237,7 @@ function App() {
                   <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => { setMostrarPerfil(true); setMenuMobileAberto(false); }}>👤 Meu Perfil</button>
                   <button className="btn-agendar-nav" style={{ background: '#f39c12', color: 'black' }} onClick={() => { setMostrarPlanos(true); setMenuMobileAberto(false); }}>💎 Assinar Clube</button>
                   
-                  {usuarioLogado.email === 'pablo_pan2015@outlook.com' && (
+                 {['pablo_pan2015@outlook.com', 'francival113@gmail.com'].includes(usuarioLogado.email) && (
                     <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => { setMostrarAdmin(true); setMenuMobileAberto(false); }}>⚙️ Painel Admin</button>
                   )}
                   <button className="btn-agendar-nav" onClick={() => { supabase.auth.signOut(); setMenuMobileAberto(false); }}>Sair</button>

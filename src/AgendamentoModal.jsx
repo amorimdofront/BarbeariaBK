@@ -161,7 +161,7 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
           body: JSON.stringify({
             items: [{ title: `Agendamento: ${servico.nome}`, unit_price: Number(servico.valor), quantity: 1, currency_id: 'BRL' }],
             payer: { name: usuario.user_metadata?.nome || 'Cliente', email: usuario.email },
-            back_urls: { success: "https://barbearia-bk.vercel.app/", failure: "https://barbearia-bk.vercel.app/", pending: "https://barbearia-bk.vercel.app/" },
+            back_urls: { success: "https://www.barbeariadobakana.com/", failure: "https://www.barbeariadobakana.com/", pending: "https://www.barbeariadobakana.com/" },
             auto_return: "approved"
           })
         });
@@ -308,6 +308,14 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        /* Alteração Crítica AQUI: Permite a rolagem na caixa do modal */
+        .agendamento-modal { 
+          max-height: 90vh; 
+          overflow-y: auto; 
+          display: flex;
+          flex-direction: column;
+        }
+
         .seletor-meses { display: flex; overflow-x: auto; gap: 15px; scrollbar-width: none; flex: 1; cursor: grab; padding: 5px 0; }
         .seletor-meses.arrastando { cursor: grabbing; }
         .seletor-meses::-webkit-scrollbar { display: none; }

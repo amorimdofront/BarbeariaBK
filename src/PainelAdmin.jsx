@@ -423,6 +423,43 @@ export default function PainelAdmin({ onVoltar }) {
 
   return (
     <div className="admin-container">
+      
+      {/* ===== ESTILOS RESPONSIVOS INJETADOS ===== */}
+      <style>{`
+        .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        @media (max-width: 768px) {
+          /* Header e Abas */
+          .admin-header-top { flex-direction: column; gap: 15px; text-align: center; }
+          .admin-header-top button { width: 100%; }
+          .admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+          .tab-btn { flex: 1 1 calc(50% - 8px); font-size: 0.9rem; padding: 12px 5px; }
+          
+          /* Grids que antes dividiam a tela (Serviços e Horários) */
+          .admin-grid-layout { grid-template-columns: 1fr !important; }
+          
+          /* Filtros da Agenda */
+          .auth-modal .input-group { flex: 1 1 100% !important; }
+          .auth-modal > div > button { flex: 1 1 100%; }
+          .auth-modal > div[style*="display: flex; gap: 10px"] { flex-wrap: wrap; width: 100%; }
+          
+          /* Forçar tabelas a não esmagarem as colunas */
+          .admin-table { min-width: 750px; }
+          
+          /* Botões dentro das tabelas (Ações) */
+          .acoes-botoes { display: flex; flex-direction: column; gap: 8px; min-width: 110px; }
+          .acoes-botoes button { width: 100%; margin: 0; }
+          
+          /* Modal do Cliente e de Reserva */
+          .auth-modal[style*="maxWidth: 700px"], .auth-modal[style*="maxWidth: 500px"] { width: 95% !important; padding: 15px !important; }
+          .auth-modal h3 { font-size: 1.2rem; }
+          
+          /* Botões de ativar plano manual */
+          .auth-modal > div > div > button.btn-acao { flex: 1 1 100% !important; margin-bottom: 5px; }
+        }
+      `}</style>
+      {/* ========================================= */}
+
       <div className="admin-header-top">
         <h2>Painel Administrativo</h2>
         <button className="btn-secundario" onClick={onVoltar}>Sair do Painel</button>
@@ -690,9 +727,9 @@ export default function PainelAdmin({ onVoltar }) {
                     </p>
                   )}
 
-                  <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto', marginTop: '10px' }}>
-                    <button className="btn-acao" style={{ background: clienteSelecionado.assinatura.status === 'ativa' ? '#ef4444' : '#34d399', color: clienteSelecionado.assinatura.status === 'ativa' ? 'white' : 'black' }} onClick={() => alternarStatusAssinatura(clienteSelecionado.assinatura.id, clienteSelecionado.assinatura.status)}>{clienteSelecionado.assinatura.status === 'ativa' ? 'Suspender Plano' : 'Ativar Plano'}</button>
-                    <button className="btn-acao" style={{ background: '#3b82f6' }} onClick={() => renovarCortesManualmente(clienteSelecionado.assinatura.id)}>🔄 Renovar Plano</button>
+                  <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto', marginTop: '10px', flexWrap: 'wrap', width: '100%' }}>
+                    <button className="btn-acao" style={{ flex: '1 1 100%', background: clienteSelecionado.assinatura.status === 'ativa' ? '#ef4444' : '#34d399', color: clienteSelecionado.assinatura.status === 'ativa' ? 'white' : 'black' }} onClick={() => alternarStatusAssinatura(clienteSelecionado.assinatura.id, clienteSelecionado.assinatura.status)}>{clienteSelecionado.assinatura.status === 'ativa' ? 'Suspender Plano' : 'Ativar Plano'}</button>
+                    <button className="btn-acao" style={{ flex: '1 1 100%', background: '#3b82f6' }} onClick={() => renovarCortesManualmente(clienteSelecionado.assinatura.id)}>🔄 Renovar Plano</button>
                   </div>
                 </div>
               ) : <p style={{ color: '#888', margin: '5px 0 0 0' }}>Este cliente não possui uma assinatura vinculada no banco.</p>}
@@ -702,14 +739,12 @@ export default function PainelAdmin({ onVoltar }) {
               <h4 style={{ color: '#f39c12', margin: '0 0 5px 0' }}>💰 Venda Manual (Dinheiro / Pix)</h4>
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '15px' }}>Ative um plano manualmente para este cliente. O cronômetro de 30 dias só inicia no 1º corte.</p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button className="btn-acao" style={{ background: '#3b82f6', color: 'white', flex: '1' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'básico')}>
+                <button className="btn-acao" style={{ background: '#3b82f6', color: 'white', flex: '1 1 100%' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'básico')}>
                   + Básico (R$ 100)
                 </button>
-                <button className="btn-acao" style={{ background: '#10b981', color: 'white', flex: '1' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'barba')}>
-                  + Barba (R$ 180)
-                </button>
-                <button className="btn-acao" style={{ background: '#f39c12', color: 'white', flex: '1' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'bk')}>
-                  + BK (R$ 250)
+                
+                <button className="btn-acao" style={{ background: '#f39c12', color: 'white', flex: '1 1 100%' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'bk')}>
+                  + VIP (R$ 130)
                 </button>
               </div>
             </div>
@@ -741,12 +776,12 @@ export default function PainelAdmin({ onVoltar }) {
                           </td>
                           <td className="acoes-botoes" style={{ padding: '5px' }}>
                             {h.status === 'pendente' && (
-                              <button className="btn-acao btn-confirmar" style={{ padding: '4px 8px', fontSize: '0.8rem' }} disabled={processandoAgendamentoId === h.id} onClick={() => atualizarStatus(h, 'confirmado')}>
+                              <button className="btn-acao btn-confirmar" style={{ padding: '8px', fontSize: '0.8rem' }} disabled={processandoAgendamentoId === h.id} onClick={() => atualizarStatus(h, 'confirmado')}>
                                 {processandoAgendamentoId === h.id ? '...' : 'Confirmar'}
                               </button>
                             )}
                             {h.status === 'confirmado' && (
-                              <button className="btn-acao btn-concluir" style={{ padding: '4px 8px', fontSize: '0.8rem' }} disabled={processandoAgendamentoId === h.id} onClick={() => atualizarStatus(h, 'concluido')}>
+                              <button className="btn-acao btn-concluir" style={{ padding: '8px', fontSize: '0.8rem' }} disabled={processandoAgendamentoId === h.id} onClick={() => atualizarStatus(h, 'concluido')}>
                                 {processandoAgendamentoId === h.id ? '...' : 'Concluir'}
                               </button>
                             )}
@@ -819,8 +854,8 @@ export default function PainelAdmin({ onVoltar }) {
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                  <input type="text" placeholder="Nome Completo do Cliente" required className="admin-input" value={reservaForm.nomeNovo} onChange={e => setReservaForm({...reservaForm, nomeNovo: e.target.value})} style={{ flex: '1 1 200px' }} />
-                  <input type="text" placeholder="WhatsApp (Opcional)" className="admin-input" value={reservaForm.telefoneNovo} onChange={e => setReservaForm({...reservaForm, telefoneNovo: e.target.value})} style={{ flex: '1 1 140px' }} />
+                  <input type="text" placeholder="Nome Completo do Cliente" required className="admin-input" value={reservaForm.nomeNovo} onChange={e => setReservaForm({...reservaForm, nomeNovo: e.target.value})} style={{ flex: '1 1 100%' }} />
+                  <input type="text" placeholder="WhatsApp (Opcional)" className="admin-input" value={reservaForm.telefoneNovo} onChange={e => setReservaForm({...reservaForm, telefoneNovo: e.target.value})} style={{ flex: '1 1 100%' }} />
                 </div>
               )}
 
