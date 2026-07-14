@@ -85,18 +85,47 @@ export default function PerfilCliente({ usuario, onVoltar, onIrParaPlanos }) {
 
   return (
     <div className="admin-container">
-      <div className="admin-header-top"><h2>Meu Perfil</h2><button className="btn-secundario" onClick={onVoltar}>Voltar ao Site</button></div>
+      
+      {/* Regras exclusivas para celular. Computador ignora isso aqui. */}
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-header-top { display: flex; flex-direction: column; gap: 15px; align-items: stretch !important; }
+          .admin-header-top button { width: 100%; }
+          .grid-perfil { grid-template-columns: 1fr !important; }
+          .card-usuario { flex-direction: column !important; text-align: center; gap: 15px !important; }
+          .filtros-mobile { flex-direction: column !important; }
+          .filtros-mobile .input-group, .filtros-mobile button { width: 100% !important; flex: none !important; }
+          .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .admin-table { min-width: 650px; }
+        }
+      `}</style>
+
+      <div className="admin-header-top">
+        <h2>Meu Perfil</h2>
+        <button className="btn-secundario" onClick={onVoltar}>Voltar ao Site</button>
+      </div>
+
       <div className="admin-content">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        {/* Voltou o 300px original do seu código */}
+        <div className="grid-perfil" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
           
-          <div className="auth-modal" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '25px', margin: 0 }}>
-            <div style={{ position: 'relative', width: '80px', height: '80px' }}>
-              {avatarUrl ? <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid #333' }} /> : <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f39c12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: 'black', fontWeight: 'bold' }}>{usuario?.user_metadata?.nome ? usuario.user_metadata.nome.charAt(0).toUpperCase() : 'C'}</div>}
-              <label style={{ position: 'absolute', bottom: '-5px', right: '-5px', background: '#3b82f6', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '3px solid #1a1a1a' }}><input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUploadAvatar} disabled={uploadingAvatar} />{uploadingAvatar ? <span className="spinner" style={{ width: '12px', height: '12px' }}></span> : '📷'}</label>
+          <div className="auth-modal card-usuario" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '25px', margin: 0 }}>
+            <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0, margin: '0 auto' }}>
+              {avatarUrl ? 
+                <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid #333' }} /> 
+                : 
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f39c12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: 'black', fontWeight: 'bold' }}>
+                  {usuario?.user_metadata?.nome ? usuario.user_metadata.nome.charAt(0).toUpperCase() : 'C'}
+                </div>
+              }
+              <label style={{ position: 'absolute', bottom: '-5px', right: '-5px', background: '#3b82f6', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '3px solid #1a1a1a' }}>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUploadAvatar} disabled={uploadingAvatar} />
+                {uploadingAvatar ? <span className="spinner" style={{ width: '12px', height: '12px' }}></span> : '📷'}
+              </label>
             </div>
             <div>
               <h3 style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>{usuario?.user_metadata?.nome || 'Cliente'}</h3>
-              <p style={{ margin: 0, color: '#94a3b8' }}>{usuario?.email}</p>
+              <p style={{ margin: 0, color: '#94a3b8', wordBreak: 'break-all' }}>{usuario?.email}</p>
             </div>
           </div>
 
@@ -138,7 +167,7 @@ export default function PerfilCliente({ usuario, onVoltar, onIrParaPlanos }) {
 
         <div className="auth-modal" style={{ padding: '20px', marginBottom: '20px' }}>
           <h4 style={{ margin: '0 0 15px 0' }}>Filtrar Histórico</h4>
-          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <div className="filtros-mobile" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
             <div className="input-group" style={{ flex: '1 1 200px' }}><label>Início</label><input type="date" className="admin-input" value={dataInicio} onChange={e => setDataInicio(e.target.value)} /></div>
             <div className="input-group" style={{ flex: '1 1 200px' }}><label>Fim</label><input type="date" className="admin-input" value={dataFim} onChange={e => setDataFim(e.target.value)} /></div>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}><button className="btn-secundario" style={{ height: '42px' }} onClick={() => { setDataInicio(''); setDataFim(''); }}>Limpar Filtro</button></div>

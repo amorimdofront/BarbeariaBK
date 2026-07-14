@@ -8,7 +8,7 @@ import LojaPlanos from './LojaPlanos';
 import './App.css';
 import navalhadoImg from './assets/navalhado.png';
 
-const imagemCorte = navalhadoImg; // Imagem local para corte
+const imagemCorte = navalhadoImg;
 const imagemBarba = 'https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?q=80&w=600&auto=format&fit=crop';
 const imagemCorteBarba = 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=600&auto=format&fit=crop';
 
@@ -25,6 +25,9 @@ function App() {
   
   const [servicoSelecionado, setServicoSelecionado] = useState(null);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
+  
+  // Novo estado para controlar o menu no mobile
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,84 +65,28 @@ function App() {
   if (telaSucesso) {
     return (
       <div className="dark-theme-app" style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh', 
-        padding: '20px',
-        background: 'linear-gradient(135deg, #000000 0%, #111111 100%)' // Fundo mais denso
+        display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '20px',
+        background: 'linear-gradient(135deg, #000000 0%, #111111 100%)'
       }}>
         <div className="auth-modal" style={{ 
-          textAlign: 'center', 
-          maxWidth: '500px',
-          width: '100%',
-          background: '#151515', 
-          border: '1px solid #f39c12', // Borda dourada
-          borderRadius: '16px', 
-          padding: '40px 30px', 
-          boxShadow: '0 10px 40px rgba(243, 156, 18, 0.15)' // Brilho suave dourado
+          textAlign: 'center', maxWidth: '500px', width: '100%', background: '#151515', 
+          border: '1px solid #f39c12', borderRadius: '16px', padding: '40px 30px', 
+          boxShadow: '0 10px 40px rgba(243, 156, 18, 0.15)'
         }}>
-          
-          <div style={{ 
-            width: '80px', 
-            height: '80px', 
-            background: 'rgba(243, 156, 18, 0.1)', 
-            borderRadius: '50%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            margin: '0 auto 20px', 
-            border: '2px solid #f39c12' 
-          }}>
-            {/* Ícone SVG de Check estilisado */}
+          <div style={{ width: '80px', height: '80px', background: 'rgba(243, 156, 18, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '2px solid #f39c12' }}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           </div>
-
-          <h2 style={{ 
-            color: '#f39c12', 
-            marginBottom: '10px', 
-            fontSize: '2.2rem', 
-            textTransform: 'uppercase', 
-            letterSpacing: '1px' 
-          }}>
-            Tudo Certo!
-          </h2>
-          
-          <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '20px', lineHeight: '1.6' }}>
-            Seu pagamento foi <strong>Aprovado</strong>.
-          </p>
-
-          <div style={{ 
-            background: 'rgba(255, 255, 255, 0.03)', 
-            padding: '15px', 
-            borderRadius: '8px', 
-            marginBottom: '30px', 
-            borderLeft: '4px solid #f39c12' 
-          }}>
-            <p style={{ margin: 0, color: '#94a3b8', fontStyle: 'italic' }}>
-              "Venha fazer seu corte e ficar novo de novo!"
-            </p>
+          <h2 style={{ color: '#f39c12', marginBottom: '10px', fontSize: '2.2rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Tudo Certo!</h2>
+          <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '20px', lineHeight: '1.6' }}>Seu pagamento foi <strong>Aprovado</strong>.</p>
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '15px', borderRadius: '8px', marginBottom: '30px', borderLeft: '4px solid #f39c12' }}>
+            <p style={{ margin: 0, color: '#94a3b8', fontStyle: 'italic' }}>"Venha fazer seu corte e ficar novo de novo!"</p>
           </div>
-
           <button 
             onClick={() => setTelaSucesso(false)} 
-            style={{ 
-              width: '100%', 
-              padding: '15px', 
-              fontSize: '1.1rem', 
-              background: '#f39c12', 
-              color: 'black', 
-              fontWeight: 'bold', 
-              textTransform: 'uppercase', 
-              letterSpacing: '1px',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'background 0.3s'
-            }}
+            style={{ width: '100%', padding: '15px', fontSize: '1.1rem', background: '#f39c12', color: 'black', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.3s' }}
             onMouseOver={(e) => e.target.style.background = '#d68910'}
             onMouseOut={(e) => e.target.style.background = '#f39c12'}
           >
@@ -153,6 +100,102 @@ function App() {
 
   return (
     <div className="dark-theme-app">
+      
+      {/* ===== ESTILOS RESPONSIVOS INJETADOS ===== */}
+      <style>{`
+        /* Configurações base do header para acomodar o botão mobile */
+        .navbar-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          position: relative;
+        }
+        
+        .hamburger-btn {
+          display: none;
+          background: none;
+          border: none;
+          color: #f39c12;
+          font-size: 2rem;
+          cursor: pointer;
+          padding: 5px;
+          line-height: 1;
+        }
+
+        .nav-menu {
+          display: flex;
+          align-items: center;
+        }
+
+        .nav-buttons-container {
+          display: flex;
+          gap: 15px;
+          align-items: center;
+        }
+
+        /* Regras apenas para Celular (menor que 768px) */
+        @media (max-width: 768px) {
+          .hamburger-btn {
+            display: block;
+          }
+
+          .nav-menu {
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(17, 17, 17, 0.98); /* Fundo escuro com leve transparência */
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-bottom: 2px solid #333;
+            z-index: 1000;
+            
+            /* Animação suave para abrir e fechar */
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+          }
+
+          .nav-menu.aberto {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+          }
+
+          .nav-menu ul {
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            width: 100%;
+          }
+
+          .nav-buttons-container {
+            flex-direction: column;
+            width: 100%;
+            gap: 12px;
+          }
+
+          .nav-buttons-container button {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+          }
+
+          /* Melhorias no botão da Hero Section para mobile */
+          .hero-buttons .btn-primary {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.15rem;
+            border-radius: 8px;
+          }
+        }
+      `}</style>
+      {/* ========================================= */}
+
       {mensagemSucesso && <div className="alerta-global sucesso">{mensagemSucesso} <button onClick={() => setMensagemSucesso('')}>✕</button></div>}
       
       {servicoSelecionado && (
@@ -167,26 +210,42 @@ function App() {
       <header className="navbar">
         <div className="navbar-container">
           <div className="logo">
-            <span className="logo-text">Barbearia do Bakana</span>
+            <span className="logo-text">BARBEARIA DO BAKANA</span>
           </div>
-          <nav>
+          
+          {/* Botão Hambúrguer (só aparece no celular) */}
+          <button 
+            className="hamburger-btn" 
+            onClick={() => setMenuMobileAberto(!menuMobileAberto)}
+            aria-label="Menu"
+          >
+            {menuMobileAberto ? '✕' : '☰'}
+          </button>
+
+          {/* Menu de Navegação */}
+          <nav className={`nav-menu ${menuMobileAberto ? 'aberto' : ''}`}>
             <ul>
-              <li>Home</li>
-              <li><a href="#servicos" style={{ color: 'inherit', textDecoration: 'none' }}>Serviços</a></li>
+              <li onClick={() => setMenuMobileAberto(false)}>Home</li>
+              <li onClick={() => setMenuMobileAberto(false)}>
+                <a href="#servicos" style={{ color: 'inherit', textDecoration: 'none' }}>Serviços</a>
+              </li>
             </ul>
-            {usuarioLogado ? (
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => setMostrarPerfil(true)}>👤 Meu Perfil</button>
-                <button className="btn-agendar-nav" style={{ background: '#f39c12', color: 'black' }} onClick={() => setMostrarPlanos(true)}>💎 Assinar Clube</button>
-                {/* Lembre-se de manter o e-mail correto do administrador aqui */}
-                {usuarioLogado.email === 'pablo_pan2015@outlook.com' && (
-                  <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => setMostrarAdmin(true)}>⚙️ Painel Admin</button>
-                )}
-                <button className="btn-agendar-nav" onClick={() => supabase.auth.signOut()}>Sair</button>
-              </div>
-            ) : (
-              <button className="btn-agendar-nav" onClick={() => setMostrarAuth(true)}>Acessar / Agendar</button>
-            )}
+            
+            <div className="nav-buttons-container">
+              {usuarioLogado ? (
+                <>
+                  <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => { setMostrarPerfil(true); setMenuMobileAberto(false); }}>👤 Meu Perfil</button>
+                  <button className="btn-agendar-nav" style={{ background: '#f39c12', color: 'black' }} onClick={() => { setMostrarPlanos(true); setMenuMobileAberto(false); }}>💎 Assinar Clube</button>
+                  
+                  {usuarioLogado.email === 'pablo_pan2015@outlook.com' && (
+                    <button className="btn-agendar-nav" style={{ background: 'transparent', color: 'white', border: '1px solid white' }} onClick={() => { setMostrarAdmin(true); setMenuMobileAberto(false); }}>⚙️ Painel Admin</button>
+                  )}
+                  <button className="btn-agendar-nav" onClick={() => { supabase.auth.signOut(); setMenuMobileAberto(false); }}>Sair</button>
+                </>
+              ) : (
+                <button className="btn-agendar-nav" onClick={() => { setMostrarAuth(true); setMenuMobileAberto(false); }}>Acessar / Agendar</button>
+              )}
+            </div>
           </nav>
         </div>
       </header>
@@ -233,7 +292,6 @@ function App() {
         )}
       </section>
 
-      {/* RODAPÉ INSERIDO AQUI */}
       <footer className="footer">
         <div className="footer-container">
           <div className="footer-column">
@@ -271,7 +329,6 @@ function App() {
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
                 </svg>
               </a>
-              
             </div>
           </div>
         </div>

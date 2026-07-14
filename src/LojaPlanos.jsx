@@ -6,30 +6,22 @@ import planobasicoImage from './assets/planobasico.png';
 const PLANOS = [
   { 
     id: 'basico', 
-    nome: 'Plano Básico', 
-    valor: 1, 
+    nome: 'Assinatura Básica', 
+    valor: 90, 
     servicos: 4, 
     destaque: false,
     beneficios: ['4 Cortes por mês', 'Desconto em pomadas', 'Agendamento prático'],
     // Pode colocar a URL da sua imagem aqui ou usar um import
     imagem: planobasicoImage
   },
-  { 
-    id: 'barba', 
-    nome: 'Plano Barba', 
-    valor: 180, 
-    servicos: 4, 
-    destaque: false,
-    beneficios: ['4 Barbas', ' premium'],
-    imagem: planobarbaImage
-  },
+ 
   { 
     id: 'bk', 
-    nome: 'Plano BK VIP', 
-    valor: 250,
+    nome: 'Assinatura VIP', 
+    valor: 130,
     servicos: 4, 
     destaque: true,
-    beneficios: ['4 Cortes + Barba', 'Prioridade na Agenda', 'Tratamento de Rei'],
+    beneficios: ['4 Cortes + Barba', 'Sobrancelha', '2 Pigmentações'],
     imagem: planobkImage
   }
 ];

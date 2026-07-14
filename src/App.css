@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Montenegrin+Gothic+One&display=swap');
 
 
 
@@ -31,6 +32,12 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
 }
+
+span {
+  color: var(--primary-color);
+  font-weight: bold;
+font-family: "Montenegrin Gothic One", serif;
+} 
 
 /* NAVBAR COM EFEITO DE VIDRO (image_0.png) */
 .navbar {
@@ -151,7 +158,7 @@ body {
 
 .hero p {
   font-size: 1.15rem;
-  color: var(--text-muted);
+  color: rgb(219, 214, 214);
   margin-bottom: 40px;
   opacity: 0.9;
 }
@@ -850,4 +857,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (max-width: 768px) {
   .admin-grid-layout { grid-template-columns: 1fr; }
   .admin-tabs { flex-wrap: wrap; }
+ :root {
+  --bg-main: #000000; /* Fundo principal preto absoluto (como na referência) */
+  --bg-card: #0a0a0a; /* Fundo dos cards mega escuro */
+  --bg-card-hover: #111111;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --primary-color: #fbbf24; /* Ouro âmbar (para detalhes e brilhos) */
+  --primary-glow: rgba(251, 191, 36, 0.4);
+  --price-color: #34d399; /* Verde neon sutil para o preço */
+  --price-glow: rgba(52, 211, 153, 0.2);
+  --border-color: rgba(255, 255, 255, 0.08);
+   --hero-bg-image: url('./assets/bannermobile.png');
+
+}
+
 }
