@@ -314,8 +314,10 @@ function App() {
           <div className="footer-column">
             <h4>Horário de Funcionamento</h4>
             <ul>
-              <li>⏱ Segunda à Sexta: 8h às 20h</li>
-              <li>⏱ Sábado: 9h às 14h</li>
+              
+              <li>⏱ Segunda à quarta: 9h às 19h</li>
+              <li>⏱ quinta e Sexta: 8h às 20h</li>
+              <li>⏱ Sábado: fechado</li>
               <li>⏱ Domingo: Fechado</li>
             </ul>
           </div>
@@ -328,7 +330,7 @@ function App() {
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
                 </svg>
-              </a>
+              </a> <span>Bakanabarber_ofc</span>
             </div>
           </div>
         </div>

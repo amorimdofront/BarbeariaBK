@@ -7,7 +7,7 @@ const PLANOS = [
   { 
     id: 'basico', 
     nome: 'Assinatura Básica', 
-    valor: 90, 
+    valor: 1, 
     servicos: 4, 
     destaque: false,
     beneficios: ['4 Cortes por mês', 'Desconto em pomadas', 'Agendamento prático'],
@@ -35,7 +35,7 @@ export default function LojaPlanos({ usuario, onVoltar }) {
     setErro('');
     
     try {
-      const ACCESS_TOKEN = 'APP_USR-5888724309282332-121722-f264b12e3b0f72771a5c336e21099951-3074782821';
+      const ACCESS_TOKEN = 'APP_USR-515042990931776-071412-a1f85ea12159922220fc0239b6e7af3d-230216815';
 
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
