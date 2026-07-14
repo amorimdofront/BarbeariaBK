@@ -167,6 +167,8 @@ font-family: "Montenegrin Gothic One", serif;
   display: flex;
   gap: 20px;
   justify-content: center;
+
+
 }
 
 .btn-primary {
@@ -175,7 +177,9 @@ font-family: "Montenegrin Gothic One", serif;
   padding: 12px 30px;
   text-decoration: none;
   font-weight: 600;
-  border-radius: 4px;
+  font-size: 0.95rem;
+  border-radius: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .btn-secondary {

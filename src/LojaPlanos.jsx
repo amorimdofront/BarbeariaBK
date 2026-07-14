@@ -7,7 +7,7 @@ const PLANOS = [
   { 
     id: 'basico', 
     nome: 'Assinatura Básica', 
-    valor: 1, 
+    valor: 90, 
     servicos: 4, 
     destaque: false,
     beneficios: ['4 Cortes por mês', 'Desconto em pomadas', 'Agendamento prático'],
