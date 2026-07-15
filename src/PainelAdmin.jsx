@@ -133,12 +133,16 @@ export default function PainelAdmin({ onVoltar }) {
     try {
       let finalClienteId = reservaForm.clienteId;
       
-      if (reservaForm.tipoCliente === 'novo') {
+     if (reservaForm.tipoCliente === 'novo') {
         if (!reservaForm.nomeNovo) throw new Error("Motivo da falha: O nome do cliente é obrigatório.");
         
+        // Gera um e-mail único falso para o banco de dados não travar
+        const emailFalso = `cliente_${Date.now()}@bakana.com`;
+
         const { data: newCli, error: errCli } = await supabase.from('clientes').insert([{
           nome: reservaForm.nomeNovo,
-          telefone: reservaForm.telefoneNovo || null
+          telefone: reservaForm.telefoneNovo || 'Não informado',
+          email: emailFalso
         }]).select().single();
         
         if (errCli) throw new Error("Falha de comunicação: Não foi possível registrar o cliente novo. " + errCli.message);
