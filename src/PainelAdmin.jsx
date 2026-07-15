@@ -133,7 +133,7 @@ export default function PainelAdmin({ onVoltar }) {
     try {
       let finalClienteId = reservaForm.clienteId;
       
-     if (reservaForm.tipoCliente === 'novo') {
+      if (reservaForm.tipoCliente === 'novo') {
         if (!reservaForm.nomeNovo) throw new Error("Motivo da falha: O nome do cliente é obrigatório.");
         
         // Gera um e-mail único falso para o banco de dados não travar
@@ -307,86 +307,224 @@ export default function PainelAdmin({ onVoltar }) {
     }
   };
 
-  // 🛡️ CORREÇÃO CRÍTICA AQUI: Lógica de desconto e vencimento
+  // 🛡️ CORREÇÃO DEFINITIVA: Abre a aba ANTES para o navegador do PC não apagar o texto
   const atualizarStatus = async (ag, novoStatus) => {
-    if (processandoAgendamentoId === ag.id) return;
-    setProcessandoAgendamentoId(ag.id);
+  if (processandoAgendamentoId === ag.id) return;
 
-    try {
-      const { data: agReal } = await supabase.from('agendamentos').select('status').eq('id', ag.id).single();
-      if (agReal && agReal.status === novoStatus) {
-        setProcessandoAgendamentoId(null);
-        return; 
-      }
+  setProcessandoAgendamentoId(ag.id);
 
-      const { error } = await supabase.from('agendamentos').update({ status: novoStatus }).eq('id', ag.id);
-      
-      if (!error) {
-        if (novoStatus === 'cancelado') {
-          const dataObj = new Date(ag.data_hora_inicio);
-          const ano = dataObj.getFullYear();
-          const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
-          const dia = String(dataObj.getDate()).padStart(2, '0');
-          const hora = String(dataObj.getHours()).padStart(2, '0');
-          const minuto = String(dataObj.getMinutes()).padStart(2, '0');
-          await supabase.from('horarios_disponiveis').update({ disponivel: true }).eq('data', `${ano}-${mes}-${dia}`).eq('horario', `${hora}:${minuto}:00`);
-        }
+  // Abre imediatamente uma aba em branco (ação do clique)
+  let whatsappTab = null;
 
-        // INÍCIO DO CRONÔMETRO DE VENCIMENTO (SEM DESCONTAR CORTES)
-        if (novoStatus === 'concluido') {
-          const clienteIdCorreto = ag.cliente_id || clienteSelecionado?.id;
+  if (novoStatus === "confirmado") {
+    whatsappTab = window.open("", "_blank");
 
-          if (clienteIdCorreto && ag.usado_credito_assinatura) {
-            const { data: planosAtivos } = await supabase
-              .from('assinaturas')
-              .select('*')
-              .eq('cliente_id', clienteIdCorreto)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            const assData = planosAtivos?.[0];
-            
-            if (assData && assData.status === 'ativa') {
-              // Se a data de vencimento estiver vazia, ativa os 30 dias a partir de agora
-              if (!assData.data_vencimento) {
-                const validade = new Date(); 
-                validade.setMonth(validade.getMonth() + 1);
-                const novaDataIso = validade.toISOString();
-
-                await supabase.from('assinaturas').update({ 
-                  data_vencimento: novaDataIso
-                  // NOTA: O desconto de (servicos_restantes - 1) foi removido daqui
-                }).eq('id', assData.id);
-
-                if (clienteSelecionado && clienteSelecionado.id === clienteIdCorreto) {
-                  setClienteSelecionado(prev => ({
-                    ...prev,
-                    assinatura: prev.assinatura ? { 
-                      ...prev.assinatura, 
-                      data_vencimento: novaDataIso
-                    } : null
-                  }));
-                }
+    if (whatsappTab) {
+      whatsappTab.document.write(`
+        <html>
+          <head>
+            <title>Aguarde...</title>
+            <style>
+              body{
+                font-family:Arial,sans-serif;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                height:100vh;
+                background:#111;
+                color:white;
               }
+            </style>
+          </head>
+          <body>
+            Abrindo WhatsApp...
+          </body>
+        </html>
+      `);
+      whatsappTab.document.close();
+    }
+  }
+
+  try {
+
+    // Verifica se outro usuário já alterou o status
+    const { data: atual } = await supabase
+      .from("agendamentos")
+      .select("status")
+      .eq("id", ag.id)
+      .single();
+
+    if (atual?.status === novoStatus) {
+      if (whatsappTab) whatsappTab.close();
+      return;
+    }
+
+    // Atualiza status
+    const { error } = await supabase
+      .from("agendamentos")
+      .update({ status: novoStatus })
+      .eq("id", ag.id);
+
+    if (error) throw error;
+
+    // Libera horário caso cancelado
+    if (novoStatus === "cancelado") {
+
+      const dataObj = new Date(ag.data_hora_inicio);
+
+      const data =
+        `${dataObj.getFullYear()}-` +
+        `${String(dataObj.getMonth()+1).padStart(2,"0")}-` +
+        `${String(dataObj.getDate()).padStart(2,"0")}`;
+
+      const horario =
+        `${String(dataObj.getHours()).padStart(2,"0")}:` +
+        `${String(dataObj.getMinutes()).padStart(2,"0")}:00`;
+
+      await supabase
+        .from("horarios_disponiveis")
+        .update({ disponivel: true })
+        .eq("data", data)
+        .eq("horario", horario);
+    }
+
+    // Lógica do plano
+    if (novoStatus === "concluido") {
+
+      const clienteId = ag.cliente_id || clienteSelecionado?.id;
+
+      if (clienteId && ag.usado_credito_assinatura) {
+
+        const { data: planos } = await supabase
+          .from("assinaturas")
+          .select("*")
+          .eq("cliente_id", clienteId)
+          .order("created_at", { ascending:false })
+          .limit(1);
+
+        const plano = planos?.[0];
+
+        if (plano && plano.status === "ativa") {
+
+          if (!plano.data_vencimento) {
+
+            const validade = new Date();
+            validade.setMonth(validade.getMonth()+1);
+
+            const novaData = validade.toISOString();
+
+            await supabase
+              .from("assinaturas")
+              .update({
+                data_vencimento: novaData
+              })
+              .eq("id", plano.id);
+
+            if (
+              clienteSelecionado &&
+              clienteSelecionado.id === clienteId
+            ) {
+
+              setClienteSelecionado(prev => ({
+                ...prev,
+                assinatura: {
+                  ...prev.assinatura,
+                  data_vencimento: novaData
+                }
+              }));
             }
           }
         }
-
-        await carregarDados();
-
-        if (novoStatus === 'confirmado') {
-          const telLimpo = ag.clientes?.telefone?.replace(/\D/g, '');
-          const dataObj = new Date(ag.data_hora_inicio);
-          const df = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(dataObj);
-          const hf = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(dataObj);
-          const msg = `Olá, ${ag.clientes?.nome?.split(' ')[0]}! ✂️ Seu agendamento para *${ag.servicos?.nome}* no dia *${df} às ${hf}* foi confirmado na Barbearia do Bakana.`;
-          window.open(`https://wa.me/55${telLimpo}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
       }
-    } finally {
-      setProcessandoAgendamentoId(null);
     }
-  };
+
+    await carregarDados();
+
+    // --------- WHATSAPP ---------
+
+    if (novoStatus === "confirmado") {
+
+      let telefone = ag.clientes?.telefone || "";
+
+      telefone = telefone.replace(/\D/g, "");
+
+      if (!telefone) {
+
+        if (whatsappTab) whatsappTab.close();
+
+        alert("Cliente não possui telefone cadastrado.");
+
+        return;
+      }
+
+      // adiciona DDI apenas se não existir
+      if (!telefone.startsWith("55")) {
+        telefone = "55" + telefone;
+      }
+
+      const dataObj = new Date(ag.data_hora_inicio);
+
+      const data =
+        new Intl.DateTimeFormat("pt-BR", {
+          day:"2-digit",
+          month:"2-digit"
+        }).format(dataObj);
+
+      const hora =
+        new Intl.DateTimeFormat("pt-BR", {
+          hour:"2-digit",
+          minute:"2-digit"
+        }).format(dataObj);
+
+      const primeiroNome =
+        ag.clientes?.nome?.split(" ")[0] || "Cliente";
+
+      const servico =
+        ag.servicos?.nome || "serviço";
+
+      const mensagem =
+`Olá ${primeiroNome}, Seu agendamento para ${servico} no dia ${data} às ${hora} foi confirmado na Barbearia do Bakana.
+
+📲💈
+
+https://www.barbeariadobakana.com/`;
+
+      const url =
+`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
+
+      if (whatsappTab) {
+
+        // reutiliza a aba já aberta
+        whatsappTab.location.replace(url);
+
+      } else {
+
+        // fallback
+        window.location.href = url;
+
+      }
+
+    } else {
+
+      if (whatsappTab) whatsappTab.close();
+
+    }
+
+  } catch (err) {
+
+    console.error(err);
+
+    if (whatsappTab) whatsappTab.close();
+
+    alert("Erro ao atualizar agendamento.");
+
+  } finally {
+
+    setProcessandoAgendamentoId(null);
+
+  }
+
+};
 
 
   const gerarHorariosEmMassa = async (e) => {
@@ -744,7 +882,7 @@ export default function PainelAdmin({ onVoltar }) {
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '15px' }}>Ative um plano manualmente para este cliente. O cronômetro de 30 dias só inicia no 1º corte.</p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button className="btn-acao" style={{ background: '#3b82f6', color: 'white', flex: '1 1 100%' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'básico')}>
-                  + Básico (R$ 100)
+                  + Básico (R$ 90)
                 </button>
                 
                 <button className="btn-acao" style={{ background: '#f39c12', color: 'white', flex: '1 1 100%' }} onClick={() => atribuirPlanoManual(clienteSelecionado.id, 'bk')}>
