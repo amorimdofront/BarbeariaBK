@@ -554,6 +554,21 @@ https://www.barbeariadobakana.com/`;
     setTimeout(() => setMensagemConfig({ tipo: '', texto: '' }), 5000);
   };
 
+  // 🗑️ NOVA FUNÇÃO PARA EXCLUIR HORÁRIOS DA GRADE
+  const excluirHorario = async (id) => {
+    if (window.confirm("Tem certeza que deseja apagar este horário da grade?")) {
+      try {
+        const { error } = await supabase.from('horarios_disponiveis').delete().eq('id', id);
+        if (error) throw error;
+        setMensagemConfig({ tipo: 'sucesso', texto: '✅ Horário apagado com sucesso!' });
+        carregarDados();
+      } catch (err) {
+        setMensagemConfig({ tipo: 'erro', texto: 'Erro ao apagar horário: ' + err.message });
+      }
+      setTimeout(() => setMensagemConfig({ tipo: '', texto: '' }), 5000);
+    }
+  };
+
   const formatarData = (iso) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 
   const getCorStatusPagamento = (status, usadoCredito) => {
@@ -742,14 +757,24 @@ https://www.barbeariadobakana.com/`;
                           <td className="destaque-data">{slot.data.split('-').reverse().join('/')}</td>
                           <td>{slot.horario.substring(0, 5)}</td>
                           <td><span className={`badge-status ${slot.disponivel ? 'confirmado' : 'pendente'}`}>{slot.disponivel ? 'Livre' : 'Reservado'}</span></td>
-                          <td>
+                          <td style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             {slot.disponivel ? (
-                              <button className="btn-acao btn-confirmar" style={{ padding: '4px 8px', fontSize: '0.85rem' }} onClick={() => abrirModalReserva(slot)}>
+                              <button className="btn-acao btn-confirmar" style={{ padding: '4px 8px', fontSize: '0.85rem', margin: 0 }} onClick={() => abrirModalReserva(slot)}>
                                 Reservar
                               </button>
                             ) : (
                               <span style={{ color: '#888', fontSize: '0.85rem' }}>Indisponível</span>
                             )}
+                            
+                            {/* BOTÃO X PARA APAGAR HORÁRIO */}
+                            <button 
+                              className="btn-acao btn-cancelar" 
+                              style={{ padding: '4px 10px', fontSize: '0.85rem', margin: 0, background: '#ef4444' }} 
+                              onClick={() => excluirHorario(slot.id)}
+                              title="Excluir este horário da grade"
+                            >
+                              ✖
+                            </button>
                           </td>
                         </tr>
                       ))}
