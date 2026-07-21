@@ -208,7 +208,9 @@ export default function AgendamentoModal({ servico, usuario, onClose, onSuccess 
     <div className="auth-overlay">
       <div className="auth-modal agendamento-modal" style={{ maxWidth: '600px', width: '95%' }}>
         <button className="btn-fechar" onClick={onClose} disabled={preferenceId || mensagemStatus.includes('✅') || mensagemStatus.includes('🌟')}>✕</button>
-        <div className="auth-header"><h2>Agendar {servico.nome}</h2></div>
+        <div className="auth-header"><h2>Agendar {servico.nome}  <br /></h2>
+        <h4>Pagamentos via cartão em manutenção</h4>
+        </div>
         
         {erro && <div className="alerta erro">{erro}</div>}
 

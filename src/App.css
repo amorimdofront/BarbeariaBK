@@ -38,6 +38,12 @@ span {
   font-weight: bold;
 font-family: "Montenegrin Gothic One", serif;
 } 
+h4 {
+  color: red;
+  font-weight: bold;
+
+  font-size: 13px;
+}
 
 /* NAVBAR COM EFEITO DE VIDRO (image_0.png) */
 .navbar {
