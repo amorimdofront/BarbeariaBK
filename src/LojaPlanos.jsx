@@ -58,7 +58,7 @@ export default function LojaPlanos({ usuario, onVoltar }) {
     
     try {
       const ASAAS_API_KEY = import.meta.env.VITE_ASAAS_API_KEY;
-      // ==========================================
+const ASAAS_URL = '/api/asaas'; // 👈 Adicione esta linha de volta!
       // ETAPA 1: Criar o Cliente no Asaas
       // ==========================================
       const customerResponse = await fetch(`${ASAAS_URL}/customers`, {
